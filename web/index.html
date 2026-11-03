@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Hallucination Cascade | Multi-Agent LLM Research Portal</title>
+  
+  <link rel="stylesheet" href="assets/app.css" />
+  
+  <!-- Google Fonts: Fraunces (Academic Serif), Plus Jakarta Sans (Body), JetBrains Mono (Code/PGN) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,400&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body {
+      background-color: #FAF6F0;
+      color: #2A1B12;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-image: radial-gradient(#DED2BF 0.75px, transparent 0.75px);
+      background-size: 24px 24px;
+    }
+    
+    /* Subtle tactile paper overlay so background dots feel archival */
+    .bg-archival {
+      background-color: rgba(250, 246, 240, 0.94);
+    }
+
+    /* Custom Scrollbar in Warm Wood tones */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F2ECE1;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #C4B299;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #7C4D2B;
+    }
+
+    .chess-grid {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      aspect-ratio: 1 / 1;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-wood-walnut selection:text-cream-bg">
+  <div class="bg-archival min-h-screen flex flex-col flex-grow">
+
+    <!-- Top Academic Banner -->
+    <div class="bg-wood-espresso text-cream-bg text-xs py-2 px-4 border-b border-wood-walnut">
+      <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
+        <div class="flex items-center gap-2 font-mono">
+          <span class="inline-block w-2 h-2 rounded-full bg-wood-amber animate-pulse"></span>
+          <span>RESEARCH TALK // STATE TRACKING IN GAME-PLAYING LANGUAGE MODELS</span>
+        </div>
+        <div class="flex items-center gap-4">
+          <span id="db-status-indicator" class="font-mono text-[11px] text-cream-border flex items-center gap-1">
+            <i data-lucide="database" class="w-3 h-3"></i> Storage: Browser Local Only
+          </span>
+          <button onclick="openQRModal()" class="underline hover:text-wood-amber transition-colors font-medium flex items-center gap-1">
+            <i data-lucide="qr-code" class="w-3.5 h-3.5"></i> Audience QR Code
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Navigation Header -->
+    <header class="sticky top-0 z-30 bg-cream-bg/95 backdrop-blur-md border-b border-cream-border shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between py-4 gap-4">
+          
+          <!-- Brand / Title -->
+          <div class="flex items-center justify-between">
+            <button onclick="switchTab('home')" class="text-left group flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-wood-walnut text-cream-bg flex items-center justify-center shadow-inner group-hover:bg-wood-walnutHover transition-colors">
+                <i data-lucide="crown" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h1 class="font-serif font-bold text-lg sm:text-xl text-wood-espresso tracking-tight leading-none">
+                  The Hallucination Cascade
+                </h1>
+                <p class="text-xs text-wood-umber font-mono mt-1">
+                  State Tracking Collapse in Multi-Agent LLMs
+                </p>
+              </div>
+            </button>
+          </div>
+
+          <!-- Navigation Pills -->
+          <nav class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0" aria-label="Main Navigation">
+            <button onclick="switchTab('home')" id="nav-home" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-1.5">
+              <i data-lucide="book-open" class="w-4 h-4"></i> Overview
+            </button>
+            <button onclick="switchTab('comparison')" id="nav-comparison" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-1.5">
+              <i data-lucide="bar-chart-3" class="w-4 h-4"></i> AI Models Comparison
+            </button>
+            <button onclick="switchTab('trials')" id="nav-trials" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-1.5">
+              <i data-lucide="swords" class="w-4 h-4"></i> All Games (<span id="nav-trial-count">0</span>)
+            </button>
+            <a href="/chess-replay/" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-1.5">
+              <i data-lucide="play" class="w-4 h-4"></i> Chess Replay Viewer
+            </a>
+            <button onclick="switchTab('sources')" id="nav-sources" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-1.5">
+              <i data-lucide="library" class="w-4 h-4"></i> Sources & Levy
+            </button>
+            <!-- Admin Console Tab (Hidden unless localhost or simulated) -->
+            <button onclick="switchTab('admin')" id="nav-admin" class="nav-btn hidden px-3.5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap items-center gap-1.5 bg-wood-amber/15 text-wood-walnut border border-wood-amber/40">
+              <i data-lucide="terminal" class="w-4 h-4"></i> Admin Console
+            </button>
+          </nav>
+
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <aside role="status" class="mb-8 rounded-xl border border-wood-amber/40 bg-wood-amber/10 px-4 py-3 text-sm text-wood-espresso">
+        <strong>Prototype data notice:</strong> bundled model metrics, trial transcripts, costs, and interview entries are illustrative placeholders, not verified research results.
+      </aside>
+
+      <!-- ==========================================
+           TAB 1: HOME / OVERVIEW
+           ========================================== -->
+      <section id="tab-home" class="tab-section space-y-10">
+        
+        <!-- Hero Card -->
+        <div class="relative rounded-2xl bg-cream-card border border-cream-border p-6 sm:p-10 shadow-sm overflow-hidden">
+          <div class="max-w-3xl space-y-5 relative z-10">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-wood-walnut/10 border border-wood-walnut/20 text-wood-walnut text-xs font-mono font-semibold">
+              <span>RESEARCH PORTAL & EXPERIMENTAL PROJECT</span>
+            </div>
+            <h2 class="font-serif text-3xl sm:text-5xl font-bold text-wood-espresso leading-tight">
+              When ChatGPT Spawns a Rook Out of Nowhere.
+            </h2>
+            <p class="text-wood-umber text-base sm:text-lg leading-relaxed">
+              This project investigates how language models maintain game state over extended play, what kinds of errors occur, and how an independent rules engine can measure them. The current site is a research prototype; its bundled comparison figures and example trials are illustrative placeholders, not verified findings.
+            </p>
+            
+            <!-- Action Buttons -->
+            <div class="pt-2 flex flex-wrap items-center gap-3">
+              <button onclick="switchTab('trials')" class="px-5 py-2.5 rounded-xl bg-wood-walnut hover:bg-wood-walnutHover text-cream-bg font-semibold text-sm shadow-sm transition-all flex items-center gap-2">
+                <i data-lucide="play" class="w-4 h-4"></i> Explore Game Trials & PGNs
+              </button>
+              <button onclick="switchTab('comparison')" class="px-5 py-2.5 rounded-xl bg-cream-bg hover:bg-cream-hover text-wood-espresso border border-cream-border font-semibold text-sm transition-all flex items-center gap-2">
+                <i data-lucide="layers" class="w-4 h-4 text-wood-walnut"></i> Compare AI Models
+              </button>
+              <button type="button" disabled title="Presentation slides are not published yet." class="px-4 py-2.5 rounded-xl bg-cream-bg text-wood-umber border border-cream-border font-mono text-xs flex items-center gap-2 opacity-60 cursor-not-allowed">
+                <i data-lucide="presentation" class="w-4 h-4 text-wood-amber"></i> Slides Coming Soon
+              </button>
+              <button onclick="openQRModal()" class="px-4 py-2.5 rounded-xl bg-wood-espresso hover:bg-wood-walnut text-cream-bg font-mono text-xs transition-all flex items-center gap-2">
+                <i data-lucide="qr-code" class="w-4 h-4"></i> Show Slide QR
+              </button>
+            </div>
+          </div>
+
+          <!-- Decorative Chess Watermark -->
+          <div class="hidden lg:flex absolute -right-8 -bottom-8 opacity-10 pointer-events-none select-none">
+            <i data-lucide="castle" class="w-72 h-72 text-wood-walnut"></i>
+          </div>
+        </div>
+
+        <!-- Live Aggregate Metrics Row -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="home-metrics-grid">
+          <!-- Populated dynamically via JS -->
+        </div>
+
+        <!-- Research Thesis & Methodology Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-cream-card border border-cream-border rounded-2xl p-6 sm:p-8 space-y-4">
+            <div class="flex items-center gap-2 text-wood-walnut font-mono text-xs uppercase tracking-wider font-semibold">
+              <i data-lucide="Cpu" class="w-4 h-4"></i> Core Phenomenon
+            </div>
+            <h3 class="font-serif text-2xl font-bold text-wood-espresso">
+              A Framework for Investigating State Tracking
+            </h3>
+            <p class="text-sm text-wood-umber leading-relaxed">
+              The project explores how model-generated actions compare with deterministic game rules. The chess and simplified UNO runners in this repository are experiments in progress; the stages below describe questions to investigate, not measured turn thresholds.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+              <div class="bg-cream-bg p-4 rounded-xl border border-cream-border">
+                <span class="font-mono text-xs font-bold text-wood-amber">STAGE 01 // BASELINE</span>
+                <h4 class="font-serif font-bold text-wood-espresso mt-1">Valid Play</h4>
+                <p class="text-xs text-wood-umber mt-1.5 leading-relaxed">
+                  Measure legal actions and game outcomes from a recorded starting state.
+                </p>
+              </div>
+              <div class="bg-cream-bg p-4 rounded-xl border border-cream-border">
+                <span class="font-mono text-xs font-bold text-wood-walnut">STAGE 02 // STATE TRACKING</span>
+                <h4 class="font-serif font-bold text-wood-espresso mt-1">Possible Drift</h4>
+                <p class="text-xs text-wood-umber mt-1.5 leading-relaxed">
+                  Examine whether move history, context length, or prompts correlate with state-tracking errors.
+                </p>
+              </div>
+              <div class="bg-cream-bg p-4 rounded-xl border border-wood-terracotta/40">
+                <span class="font-mono text-xs font-bold text-wood-terracotta">STAGE 03 // FAILURE ANALYSIS</span>
+                <h4 class="font-serif font-bold text-wood-espresso mt-1">Illegal Actions</h4>
+                <p class="text-xs text-wood-umber mt-1.5 leading-relaxed">
+                  Record invalid actions and determine how an explicit referee should handle them.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Navigation / Open Source Architecture Card -->
+          <div class="bg-wood-espresso text-cream-bg rounded-2xl p-6 sm:p-8 flex flex-col justify-between space-y-6">
+            <div class="space-y-3">
+              <div class="inline-flex items-center gap-1.5 text-wood-amber font-mono text-xs">
+                <i data-lucide="git-branch" class="w-4 h-4"></i> REPRODUCIBLE RESEARCH TOOLS
+              </div>
+              <h3 class="font-serif text-2xl font-bold">
+                Reproducible Benchmarks & Logs
+              </h3>
+              <p class="text-xs text-cream-border leading-relaxed">
+                The chess runner records prompts, SAN moves, board snapshots, and audit logs. The UNO runner records trial outcomes. Token usage and API costs are not currently tracked.
+              </p>
+            </div>
+
+            <div class="space-y-2.5 pt-2 border-t border-wood-walnut/50 text-xs font-mono">
+              <div class="flex justify-between">
+                <span class="text-cream-border">Board Renderers:</span>
+                <span class="text-wood-amber">Modular PGN / State</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-cream-border">Database Layer:</span>
+                <span class="text-wood-amber">Local JSON export</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-cream-border">Admin Entry:</span>
+                <span class="text-wood-amber">localhost gated</span>
+              </div>
+            </div>
+
+            <button onclick="switchTab('sources')" class="w-full py-2.5 px-4 rounded-xl bg-wood-walnut hover:bg-wood-amber text-cream-bg font-semibold text-xs transition-colors flex items-center justify-center gap-2">
+              <i data-lucide="video" class="w-4 h-4"></i> Watch Levy (GothamChess) Breakdowns
+            </button>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ==========================================
+           TAB 2: AI MODELS COMPARISON
+           ========================================== -->
+      <section id="tab-comparison" class="tab-section hidden space-y-8">
+        
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-cream-border pb-6">
+          <div>
+            <span class="font-mono text-xs uppercase tracking-wider text-wood-walnut font-semibold">Cross-Game Evaluation</span>
+            <h2 class="font-serif text-3xl font-bold text-wood-espresso mt-1">AI Models Performance Matrix</h2>
+            <p class="text-sm text-wood-umber mt-1">Flick between games to inspect how each architecture handles spatial and sequential state tracking.</p>
+          </div>
+
+          <!-- Game Switcher Pills -->
+          <div class="flex flex-wrap gap-2" id="comparison-game-pills">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+        <!-- Selected Game Overview Banner -->
+        <div id="comparison-game-banner" class="bg-cream-card border border-cream-border rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+          <!-- Populated via JS -->
+        </div>
+
+        <!-- Model Comparison Cards Grid -->
+        <div id="comparison-models-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Populated via JS -->
+        </div>
+
+      </section>
+
+      <!-- ==========================================
+           TAB 3: ALL GAMES (TRIAL EXPLORER)
+           ========================================== -->
+      <section id="tab-trials" class="tab-section hidden space-y-6">
+        
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-cream-border pb-6">
+          <div>
+            <span class="font-mono text-xs uppercase tracking-wider text-wood-walnut font-semibold">Raw Experimental Logs</span>
+            <h2 class="font-serif text-3xl font-bold text-wood-espresso mt-1">All Logged Game Trials</h2>
+            <p class="text-sm text-wood-umber mt-1">Inspect exact prompts, warmth (temperature), credits burned, and step-by-step PGN state logs.</p>
+          </div>
+
+          <!-- Filters -->
+          <div class="flex flex-wrap items-center gap-3">
+            <select id="filter-game" onchange="renderTrials()" class="px-3.5 py-2 rounded-xl bg-cream-card border border-cream-border text-sm font-medium text-wood-espresso focus:outline-none focus:border-wood-walnut">
+              <option value="ALL">All Games</option>
+              <option value="Chess">Chess</option>
+              <option value="Connect Four">Connect Four</option>
+              <option value="Tic-Tac-Toe">Tic-Tac-Toe</option>
+              <option value="Battleship">Battleship</option>
+            </select>
+
+            <select id="filter-model" onchange="renderTrials()" class="px-3.5 py-2 rounded-xl bg-cream-card border border-cream-border text-sm font-medium text-wood-espresso focus:outline-none focus:border-wood-walnut">
+              <option value="ALL">All Models</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Master-Detail Layout for Trials -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          <!-- Left Column: Trial List (5 cols) -->
+          <div id="trials-list-container" class="lg:col-span-5 space-y-3 max-h-[750px] overflow-y-auto pr-1">
+            <!-- Populated via JS -->
+          </div>
+
+          <!-- Right Column: Active Trial Inspector & Open-Source Renderer Slot (7 cols) -->
+          <div id="trial-detail-container" class="lg:col-span-7 bg-cream-card border border-cream-border rounded-2xl p-6 shadow-sm sticky top-24">
+            <!-- Populated via JS -->
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ==========================================
+           TAB 4: SOURCES & MEDIA
+           ========================================== -->
+      <section id="tab-sources" class="tab-section hidden space-y-8">
+        
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-cream-border pb-6">
+          <div>
+            <span class="font-mono text-xs uppercase tracking-wider text-wood-walnut font-semibold">Primary & Secondary Literature</span>
+            <h2 class="font-serif text-3xl font-bold text-wood-espresso mt-1">Sources, Interviews & Levy Archives</h2>
+            <p class="text-sm text-wood-umber mt-1">Curated media showcasing real-world LLM board hallucinations, expert interviews, and academic citations.</p>
+          </div>
+
+          <!-- Category Filter Buttons -->
+          <div class="flex flex-wrap gap-2">
+            <button onclick="filterSources('ALL')" id="src-btn-ALL" class="src-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-wood-walnut text-cream-bg">
+              All Sources
+            </button>
+            <button onclick="filterSources('levy_video')" id="src-btn-levy_video" class="src-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-cream-card text-wood-umber border border-cream-border hover:bg-cream-hover">
+              Levy's Videos (GothamChess)
+            </button>
+            <button onclick="filterSources('interview')" id="src-btn-interview" class="src-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-cream-card text-wood-umber border border-cream-border hover:bg-cream-hover">
+              Interview Recordings
+            </button>
+            <button onclick="filterSources('bibliography')" id="src-btn-bibliography" class="src-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-cream-card text-wood-umber border border-cream-border hover:bg-cream-hover">
+              Annotated Bibliography
+            </button>
+          </div>
+        </div>
+
+        <!-- Sources Grid -->
+        <div id="sources-grid-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Populated via JS -->
+        </div>
+
+      </section>
+
+      <!-- ==========================================
+           TAB 5: ADMIN CONSOLE (LOCALHOST GATED)
+           ========================================== -->
+      <section id="tab-admin" class="tab-section hidden space-y-8">
+        
+        <div class="bg-wood-espresso text-cream-bg rounded-2xl p-6 border border-wood-walnut flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="inline-flex items-center gap-2 text-wood-amber font-mono text-xs">
+              <i data-lucide="shield-check" class="w-4 h-4"></i> LOCALHOST ADMIN ENVIRONMENT UNLOCKED
+            </div>
+            <h2 class="font-serif text-2xl font-bold">Research Data & Database Console</h2>
+            <p class="text-xs text-cream-border">Add trials, move logs, or sources without touching HTML code. Changes stay in this browser until exported as JSON.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="exportMasterJSON()" class="px-4 py-2 rounded-xl bg-wood-walnut hover:bg-wood-amber text-cream-bg text-xs font-mono font-semibold transition-colors flex items-center gap-1.5">
+              <i data-lucide="download" class="w-4 h-4"></i> Export Master JSON
+            </button>
+            <label class="px-4 py-2 rounded-xl bg-cream-bg/10 hover:bg-cream-bg/20 text-cream-bg text-xs font-mono font-semibold transition-colors flex items-center gap-1.5 cursor-pointer border border-cream-border/20">
+              <i data-lucide="upload" class="w-4 h-4"></i> Import JSON
+              <input type="file" accept=".json" onchange="importMasterJSON(event)" class="hidden" />
+            </label>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          <!-- Left: Add New Game Trial Form (7 cols) -->
+          <div class="lg:col-span-7 bg-cream-card border border-cream-border rounded-2xl p-6 space-y-5">
+            <div class="flex items-center justify-between border-b border-cream-border pb-3">
+              <h3 class="font-serif text-xl font-bold text-wood-espresso flex items-center gap-2">
+                <i data-lucide="plus-circle" class="w-5 h-5 text-wood-walnut"></i> Log New Game Trial
+              </h3>
+              <span class="text-xs font-mono text-wood-umber">Auto-updates Comparison & Explorer</span>
+            </div>
+
+            <form id="form-add-trial" onsubmit="handleAddTrial(event)" class="space-y-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-mono uppercase text-wood-umber mb-1">Game Type *</label>
+                  <select id="admin-trial-game" required class="w-full px-3 py-2 rounded-lg bg-cream-bg border border-cream-border text-sm text-wood-espresso focus:outline-none focus:border-wood-walnut">
+                    <option value="Chess">Chess</option>
+                    <option value="Connect Four">Connect Four</option>
+                    <option value="Tic-Tac-Toe">Tic-Tac-Toe</option>
+                    <option value="Battleship">Battleship</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-mono uppercase text-wood-umber mb-1">Model Name / Matchup *</label>
+                  <input type="text" id="admin-trial-model" required placeholder="e.g., GPT-4o vs Claude 3.5 Sonnet" class="w-full px-3 py-2 rounded-lg bg-cream-bg border border-cream-border text-sm text-wood-espresso focus:outline-none focus:border-wood-walnut" />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <label class="block text-xs font-mono uppercase text-wood-umber mb-1">Warmth (Temp)</label>
+                  <input type="number" step="0.05" id="admin-trial-temp" value="0.7" required class="w-full px-3 py-2 rounded-lg bg-cream-bg border border-cream-border text-sm font-mono text-wood-espresso" />
+                </div>
+                <div>
+                  <label class="block text-xs font-mono uppercase text-wood-umber mb-1">Max Tokens</label>
+                  <input type="number" id="admin-trial-tokens" value="2048" required class="w-full px-3 py-2 rounded-lg bg-cream-bg border border-cream-border text-sm font-mono text-wood-espresso" />
+                </div>
+                <div>
+                  <label class="block text-xs font-mono uppercase text-wood-umber mb-1">Credits ($)</label>
+                  <input type="number" step="0.01" id="admin-trial-credits" value="0.18" required class="w-full px-3 py-2 rounded-lg bg-cream-bg border border-cream-border text-sm font-mono text-wood-espresso" />
+                </div>
+                <div>
+                  <label class="block text-xs font-mono uppercase text-wood-umber mb-1">Collapse Turn</label>
+                  <input type="number" id="admin-trial-collapse" value="19" required class="w-full px-3 py-2 rounded-lg bg-cream-bg border border-cream-border text-sm font-mono text-wood-espresso" />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs font-mono uppercase text-wood-umber mb-1">Illegal Moves Count</label>
+                  <input type="number" id="admin-trial-illegal" value="3" required class="w-full px-3 py-2 rounded-lg bg-cream-bg border border-cream-border text-sm font-mono text-wood-espresso" />
+                </div>
+                <div>
+                  <label class="block text-xs font-mono uppercase text-wood-umber mb-1">Hallucination Archetype</label>
+                  <input type="text" id="admin-trial-archetype" placeholder="e.g., Phantom Rook Spawn" required class="w-full px-3 py-2 rounded-lg bg-cream-bg border border-cream-border text-sm text-wood-espresso" />
+                </div>
+                <div>
+                  <label class="block text-xs font-mono uppercase text-wood-umber mb-1">Outcome</label>
+                  <select id="admin-trial-outcome" class="w-full px-3 py-2 rounded-lg bg-cream-bg border border-cream-border text-sm text-wood-espresso">
+                    <option value="State Collapse / Halt">State Collapse / Halt</option>
+                    <option value="Valid Win (White/P1)">Valid Win (White/P1)</option>
+                    <option value="Valid Win (Black/P2)">Valid Win (Black/P2)</option>
+                    <option value="Infinite Loop Draw">Infinite Loop Draw</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-mono uppercase text-wood-umber mb-1">Exact System / User Prompt Used *</label>
+                <textarea id="admin-trial-prompt" rows="3" required placeholder="Paste the exact prompt template used for this trial..." class="w-full px-3 py-2 rounded-lg bg-cream-bg border border-cream-border text-xs font-mono text-wood-espresso focus:outline-none focus:border-wood-walnut"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-xs font-mono uppercase text-wood-umber mb-1">Move Log / PGN String (with annotations) *</label>
+                <textarea id="admin-trial-pgn" rows="4" required placeholder="1. e4 e5 2. Nf3 Nc6 ... 18. Rxe8# (Illegal: Rook spawned on a8)" class="w-full px-3 py-2 rounded-lg bg-cream-bg border border-cream-border text-xs font-mono text-wood-espresso focus:outline-none focus:border-wood-walnut"></textarea>
+              </div>
+
+              <button type="submit" class="w-full py-3 rounded-xl bg-wood-walnut hover:bg-wood-walnutHover text-cream-bg font-semibold text-sm shadow-sm transition-colors flex items-center justify-center gap-2">
+                <i data-lucide="save" class="w-4 h-4"></i> Save Trial to Database
+              </button>
+            </form>
+          </div>
+
+          <!-- Right Column: Add Source Form + Cloud DB Config (5 cols) -->
+          <div class="lg:col-span-5 space-y-6">
+            
+            <!-- Add New Source Form -->
+            <div class="bg-cream-card border border-cream-border rounded-2xl p-6 space-y-4">
+              <h3 class="font-serif text-xl font-bold text-wood-espresso border-b border-cream-border pb-3 flex items-center gap-2">
+                <i data-lucide="bookmark-plus" class="w-5 h-5 text-wood-walnut"></i> Add Source / Levy Video
+              </h3>
+              <form id="form-add-source" onsubmit="handleAddSource(event)" class="space-y-3.5">
+                <div>
+                  <label class="block text-xs font-mono uppercase text-wood-umber mb-1">Category *</label>
+                  <select id="admin-src-category" required class="w-full px-3 py-2 rounded-lg bg-cream-bg border border-cream-border text-sm text-wood-espresso">
+                    <option value="levy_video">Levy's Videos (GothamChess)</option>
+                    <option value="interview">Interview Recordings</option>
+                    <option value="bibliography">Annotated Bibliography</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-mono uppercase text-wood-umber mb-1">Title / Header *</label>
+                  <input type="text" id="admin-src-title" required placeholder='e.g., "CHATGPT MAKES A ROOK APPEAR OUT OF NOWHERE"' class="w-full px-3 py-2 rounded-lg bg-cream-bg border border-cream-border text-sm text-wood-espresso" />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-mono uppercase text-wood-umber mb-1">URL / YouTube Link *</label>
+                    <input type="url" id="admin-src-url" required placeholder="https://youtube.com/..." class="w-full px-3 py-2 rounded-lg bg-cream-bg border border-cream-border text-xs font-mono text-wood-espresso" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-mono uppercase text-wood-umber mb-1">Format Badge</label>
+                    <input type="text" id="admin-src-badge" placeholder="YT Short / Audio / Paper" required class="w-full px-3 py-2 rounded-lg bg-cream-bg border border-cream-border text-xs font-mono text-wood-espresso" />
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-mono uppercase text-wood-umber mb-1">Annotation / Key Takeaway *</label>
+                  <textarea id="admin-src-notes" rows="3" required placeholder="Why this source matters for our state-collapse thesis..." class="w-full px-3 py-2 rounded-lg bg-cream-bg border border-cream-border text-xs text-wood-espresso"></textarea>
+                </div>
+                <button type="submit" class="w-full py-2.5 rounded-xl bg-wood-espresso hover:bg-wood-walnut text-cream-bg font-semibold text-xs transition-colors flex items-center justify-center gap-2">
+                  <i data-lucide="plus" class="w-4 h-4"></i> Add to Sources Library
+                </button>
+              </form>
+            </div>
+
+            <!-- Backend integration is intentionally deferred. -->
+            <div class="bg-cream-card border border-cream-border rounded-2xl p-6 space-y-4">
+              <div class="flex items-center justify-between">
+                <h3 class="font-serif text-lg font-bold text-wood-espresso flex items-center gap-2">
+                  <i data-lucide="cloud" class="w-5 h-5 text-wood-amber"></i> Cloud Sync
+                </h3>
+                <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-wood-amber/20 text-wood-walnut font-semibold">Planned</span>
+              </div>
+              <p class="text-xs text-wood-umber leading-relaxed">
+                Cloud storage is not connected yet. This static site saves editable demo content in this browser only; backend integration will be added in a later phase.
+              </p>
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-[11px] font-mono uppercase text-wood-umber mb-1">Project URL (planned)</label>
+                  <input type="text" id="supabase-url" placeholder="Backend integration planned" disabled class="w-full px-3 py-1.5 rounded-lg bg-cream-bg border border-cream-border text-xs font-mono text-wood-espresso" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-mono uppercase text-wood-umber mb-1">Public key (planned)</label>
+                  <input type="password" id="supabase-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..." disabled class="w-full px-3 py-1.5 rounded-lg bg-cream-bg border border-cream-border text-xs font-mono text-wood-espresso" />
+                </div>
+                <div class="flex gap-2 pt-1">
+                  <button type="button" disabled class="flex-1 py-2 rounded-lg bg-wood-walnut text-cream-bg text-xs font-mono font-semibold transition-colors opacity-50 cursor-not-allowed">
+                    Backend Integration Planned
+                  </button>
+                  <button onclick="resetToDefaultData()" class="px-3 py-2 rounded-lg bg-cream-bg border border-cream-border text-wood-terracotta text-xs font-mono hover:bg-cream-hover transition-colors">
+                    Reset Demo Data
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Footer with Localhost Simulator Toggle -->
+    <footer class="border-t border-cream-border bg-cream-card/70 py-6 px-4 mt-16">
+      <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-wood-umber">
+        <div class="flex items-center gap-2">
+          <span class="font-serif font-bold text-wood-espresso">The Hallucination Cascade</span>
+          <span>•</span>
+          <span>Static site · Vercel-ready</span>
+        </div>
+        <div class="flex items-center gap-4 font-mono">
+          <span id="hostname-display" class="text-[11px]">Host: detecting...</span>
+          <button onclick="toggleSimulatedAdmin()" id="sim-admin-btn" class="px-2.5 py-1 rounded bg-wood-walnut/10 hover:bg-wood-walnut/20 text-wood-walnut border border-wood-walnut/30 transition-colors">
+            [Dev: Toggle Localhost Admin]
+          </button>
+        </div>
+      </div>
+    </footer>
+
+    <!-- ==========================================
+         MODAL: QR CODE FOR PRESENTATION SLIDES
+         ========================================== -->
+    <div id="qr-modal" class="fixed inset-0 z-50 hidden bg-wood-espresso/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-cream-bg border-2 border-wood-walnut rounded-2xl max-w-md w-full p-6 sm:p-8 text-center space-y-5 shadow-2xl relative">
+        <button onclick="closeQRModal()" class="absolute top-4 right-4 text-wood-umber hover:text-wood-espresso">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-wood-walnut/10 text-wood-walnut font-mono text-xs font-semibold">
+          LIVE AUDIENCE ACCESS
+        </div>
+        <h3 class="font-serif text-2xl font-bold text-wood-espresso">
+          Scan to Visit the Project Portal
+        </h3>
+        <p class="text-xs text-wood-umber">
+          Scan to open the hosted project portal. Local replay data is not uploaded or included with the static deployment.
+        </p>
+        
+        <!-- Dynamic SVG QR representation -->
+        <div class="bg-white p-5 rounded-2xl border border-cream-border inline-block mx-auto shadow-inner">
+          <img id="qr-image" alt="Research Portal QR Code" class="w-48 h-48 mx-auto rounded hidden" />
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-[11px] font-mono text-wood-umber uppercase">Portal URL (auto-detected when hosted):</label>
+          <div class="flex gap-2">
+            <input type="url" id="qr-url-input" placeholder="https://your-project.vercel.app" oninput="updateQRUrl(this.value)" class="flex-1 px-3 py-2 rounded-lg bg-cream-card border border-cream-border text-xs font-mono text-wood-espresso" />
+            <button onclick="copyPortalUrl()" class="px-3 py-2 rounded-lg bg-wood-walnut text-cream-bg text-xs font-mono font-semibold hover:bg-wood-walnutHover">
+              Copy
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Box -->
+    <div id="toast-box" class="fixed bottom-5 right-5 z-50 hidden bg-wood-espresso text-cream-bg px-4 py-3 rounded-xl shadow-lg border border-wood-walnut text-xs font-mono flex items-center gap-2.5 max-w-sm">
+      <i data-lucide="check-circle-2" class="w-4 h-4 text-wood-amber shrink-0"></i>
+      <span id="toast-message">Action completed.</span>
+    </div>
+
+  </div>
+
+  <!-- ==========================================
+       APPLICATION LOGIC & INITIAL RESEARCH DATASET
+       ========================================== -->
+  <script>
+    // --- 1. RICH STARTER RESEARCH DATA ---
+    const DEFAULT_DATA = {
+      modelsComparison: [
+        {
+          game: "Chess",
+          description: "High branching factor (35+ legal moves/turn). Extreme sensitivity to coordinate occlusion and piece memory.",
+          models: [
+            {
+              name: "GPT-4o",
+              provider: "OpenAI",
+              avgCollapseTurn: 21.4,
+              illegalMovesPerGame: 3.8,
+              archetype: "Phantom Piece Spawning & Diagonal Teleportation",
+              avgCredits: 0.24,
+              validRate: 28,
+              collapseRate: 72,
+              notes: "Strong opening book through turn 14. Frequently resurrects captured rooks or castles across attacked squares under pressure."
+            },
+            {
+              name: "Claude 3.5 Sonnet",
+              provider: "Anthropic",
+              avgCollapseTurn: 26.8,
+              illegalMovesPerGame: 1.9,
+              archetype: "Pinned Piece Blindness & Quiet State Drift",
+              avgCredits: 0.29,
+              validRate: 45,
+              collapseRate: 55,
+              notes: "Maintains spatial consistency longest among tested models, but occasionally forgets absolute pins on its own King."
+            },
+            {
+              name: "Llama 3.1 (70B)",
+              provider: "Meta",
+              avgCollapseTurn: 13.2,
+              illegalMovesPerGame: 6.4,
+              archetype: "Early Coordinate Desync & Friendly Fire",
+              avgCredits: 0.06,
+              validRate: 12,
+              collapseRate: 88,
+              notes: "Captures its own pieces by turn 12–15 when PGN history exceeds ~800 tokens without an explicit ASCII board refresh."
+            }
+          ]
+        },
+        {
+          game: "Connect Four",
+          description: "Vertical gravity constraint (7x6 grid). Tests whether LLMs understand column stacking and 4-in-a-row diagonal detection.",
+          models: [
+            {
+              name: "GPT-4o",
+              provider: "OpenAI",
+              avgCollapseTurn: 18.0,
+              illegalMovesPerGame: 1.2,
+              archetype: "Missed Diagonal Win / Column Overflow",
+              avgCredits: 0.11,
+              validRate: 68,
+              collapseRate: 32,
+              notes: "Tracks vertical fill heights well, but misses opponent anti-diagonal 3-in-a-row threats 40% of the time."
+            },
+            {
+              name: "Claude 3.5 Sonnet",
+              provider: "Anthropic",
+              avgCollapseTurn: 22.5,
+              illegalMovesPerGame: 0.6,
+              archetype: "Rare Row-Height Off-By-One",
+              avgCredits: 0.14,
+              validRate: 82,
+              collapseRate: 18,
+              notes: "Explicitly counts column tokens before moving. Rarely plays in a full column."
+            },
+            {
+              name: "Llama 3.1 (70B)",
+              provider: "Meta",
+              avgCollapseTurn: 11.4,
+              illegalMovesPerGame: 3.1,
+              archetype: "Floating Discs (Ignoring Gravity)",
+              avgCredits: 0.03,
+              validRate: 35,
+              collapseRate: 65,
+              notes: "Attempts to place discs directly into row 4 of an empty column as if playing Tic-Tac-Toe."
+            }
+          ]
+        },
+        {
+          game: "Battleship",
+          description: "Hidden-state deduction (10x10 grid). Evaluates hallucinated ship lengths and duplicate coordinate strikes.",
+          models: [
+            {
+              name: "GPT-4o",
+              provider: "OpenAI",
+              avgCollapseTurn: 29.0,
+              illegalMovesPerGame: 2.1,
+              archetype: "Duplicate Coordinate Firing & 6-Tile Carrier",
+              avgCredits: 0.31,
+              validRate: 54,
+              collapseRate: 46,
+              notes: "Occasionally forgets it already guessed B4 fifteen turns earlier, or claims its Destroyer is still afloat after 4 hits."
+            },
+            {
+              name: "Claude 3.5 Sonnet",
+              provider: "Anthropic",
+              avgCollapseTurn: 34.2,
+              illegalMovesPerGame: 0.9,
+              archetype: "Conservative Quadrant Clustering",
+              avgCredits: 0.36,
+              validRate: 76,
+              collapseRate: 24,
+              notes: "Systematic hunt-and-target parity search. Very low hallucination rate when prompted with strike history."
+            }
+          ]
+        },
+        {
+          game: "Tic-Tac-Toe",
+          description: "3x3 baseline control benchmark. Used to verify if models overwrite occupied squares at high temperatures.",
+          models: [
+            {
+              name: "GPT-4o",
+              provider: "OpenAI",
+              avgCollapseTurn: 9.0,
+              illegalMovesPerGame: 0.1,
+              archetype: "Near-Zero Collapse (Solved Horizon)",
+              avgCredits: 0.02,
+              validRate: 98,
+              collapseRate: 2,
+              notes: "Only hallucinates if temperature > 1.2, occasionally overwriting center square (B2)."
+            },
+            {
+              name: "Claude 3.5 Sonnet",
+              provider: "Anthropic",
+              avgCollapseTurn: 9.0,
+              illegalMovesPerGame: 0.0,
+              archetype: "Deterministic Draw Lock",
+              avgCredits: 0.03,
+              validRate: 100,
+              collapseRate: 0,
+              notes: "Zero illegal moves across 25 baseline control trials."
+            }
+          ]
+        }
+      ],
+
+      trials: [
+        {
+          id: "TRIAL-101",
+          game: "Chess",
+          model: "GPT-4o (White) vs Claude 3.5 Sonnet (Black)",
+          temperature: 0.7,
+          maxTokens: 2048,
+          creditsBurned: 0.34,
+          collapseTurn: 19,
+          illegalMovesCount: 4,
+          archetype: "Phantom Rook Spawn & Omniscient Bishop",
+          outcome: "State Collapse / Halt",
+          promptUsed: `SYSTEM: You are playing standard FIDE Chess as White. You will receive the cumulative PGN string of the game so far. Output ONLY your next legal move in Standard Algebraic Notation (SAN) and a brief 1-sentence internal board state verification. Do not invent pieces or ignore blocking pawns.`,
+          pgnLog: `1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O 9. h3 Na5 10. Bc2 c5 11. d4 Qc7 12. Nbd2 cxd4 13. cxd4 Nc6 14. Nb3 a5 15. Be3 a4 16. Nbd2 Bd7 17. Rc1 Qb7 18. Qe2 Rfc8 19. Rxa8+ [ILLEGAL: White Rook on c1 teleports through b1/a1/a7 to capture on a8] 19... Qxa8 20. Nxe5 [HALLUCINATION CASCADE: Black accepts teleported capture; White now ignores d6 pawn guard]`,
+          steps: [
+            { turn: "Turn 1–10", move: "1. e4 e5 ... 10. Bc2 c5", status: "VALID", note: "Standard Ruy Lopez Chigorin Defense. Both models track all 32 pieces accurately." },
+            { turn: "Turn 17", move: "17. Rc1 Qb7", status: "DRIFT", note: "GPT-4o internal monologue claims the a-file is 'completely open' despite pawns on a2 and a4." },
+            { turn: "Turn 19 (COLLAPSE)", move: "19. Rxa8+", status: "ILLEGAL", note: "GPT-4o teleports its c1 Rook directly to a8, jumping over 3 occupied squares. Claude 3.5 accepts the move and recaptures with Qxa8." },
+            { turn: "Turn 20", move: "20. Nxe5", status: "CASCADE", note: "Board state permanently desynchronized between both agents." }
+          ]
+        },
+        {
+          id: "TRIAL-102",
+          game: "Chess",
+          model: "GPT-4 (Legacy) vs Stockfish Level 1 (Fable / Levy Benchmark)",
+          temperature: 0.8,
+          maxTokens: 1024,
+          creditsBurned: 0.19,
+          collapseTurn: 14,
+          illegalMovesCount: 7,
+          archetype: "Respawning Captured Rook & King Sacrifice",
+          outcome: "State Collapse / Halt",
+          promptUsed: `USER: The current move history is provided in PGN format. Play the strongest tactical continuation. State your move clearly.`,
+          pgnLog: `1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d3 d6 6. Bg5 h6 7. Bh4 g5 8. Bg3 O-O 9. Nbd2 Nh5 10. Nxe5 Nxg3 11. Nxc6 Qf6 12. fxg3 Qf2# [IGNORED CHECKMATE] 13. Rf1 Qxg2 14. Rook to e8# [PHANTOM ROOK SPAWNED OUT OF NOWHERE]`,
+          steps: [
+            { turn: "Turn 1–11", move: "Italian Game Giuoco Piano", status: "VALID", note: "Normal development until tactical complications on f2." },
+            { turn: "Turn 12", move: "12... Qf2#", status: "DRIFT", note: "Black delivers legal checkmate on f2. Model refuses to acknowledge the game has ended." },
+            { turn: "Turn 14 (COLLAPSE)", move: "14. Re8#", status: "ILLEGAL", note: "Model spawns an uncaptured Rook directly onto e8 to declare counter-checkmate." }
+          ]
+        },
+        {
+          id: "TRIAL-103",
+          game: "Connect Four",
+          model: "Claude 3.5 Sonnet vs Llama 3.1 (70B)",
+          temperature: 0.5,
+          maxTokens: 1024,
+          creditsBurned: 0.09,
+          collapseTurn: 12,
+          illegalMovesCount: 2,
+          archetype: "Anti-Gravity Floating Disc Placement",
+          outcome: "Valid Win (White/P1)",
+          promptUsed: `SYSTEM: Connect Four on a 7-column (A-G), 6-row (1-6) board. Discs drop to the lowest unoccupied row in the chosen column. Output column letter and resulting coordinate.`,
+          pgnLog: `1. D1(R) D2(Y) 2. C1(R) E1(Y) 3. C2(R) C3(Y) 4. B1(R) D3(Y) 5. D4(R) E2(Y) 6. E3(R) [LLAMA PLAYS E6 - FLOATING DISC AT TOP OF BOARD] -> Forced Retry -> 7. A1(R) Wins Horizontal`,
+          steps: [
+            { turn: "Move 1–5", move: "Center Column Contest (D & C)", status: "VALID", note: "Both models properly increment row height (D1 -> D2 -> D3 -> D4)." },
+            { turn: "Move 6 (COLLAPSE)", move: "Llama declares E6", status: "ILLEGAL", note: "Despite E3, E4, and E5 being empty, Llama attempts to suspend a yellow disc at the top rim (E6)." }
+          ]
+        },
+        {
+          id: "TRIAL-104",
+          game: "Battleship",
+          model: "GPT-4o vs GPT-4o (Self-Play Mirror)",
+          temperature: 0.9,
+          maxTokens: 4096,
+          creditsBurned: 0.42,
+          collapseTurn: 27,
+          illegalMovesCount: 3,
+          archetype: "Immortal 6-Tile Battleship & Amnesia Strikes",
+          outcome: "State Collapse / Halt",
+          promptUsed: `SYSTEM: Maintain your secret 10x10 fleet layout in hidden scratchpad tags <fleet> and announce HIT, MISS, or SUNK honestly to opponent coordinates.`,
+          pgnLog: `Turns 1-20: Valid parity search. Turn 21: Agent B hits C4, C5, C6, C7, C8 (5 hits on Carrier). Agent A claims 'STILL AFLOAT'. Turn 27: Agent B fires at C4 for the third time.`,
+          steps: [
+            { turn: "Turn 1–20", move: "Checkerboard Hunt Phase", status: "VALID", note: "High efficiency coordinate tracking." },
+            { turn: "Turn 21 (COLLAPSE)", move: "Strike C8 (5th hit on Carrier)", status: "ILLEGAL", note: "Agent A's scratchpad shifts Carrier coordinates mid-game from C4-C8 to C5-C9 to avoid sinking." }
+          ]
+        }
+      ],
+
+      sources: [
+        {
+          id: "SRC-1",
+          category: "levy_video",
+          title: '"CHATGPT MAKES A ROOK APPEAR OUT OF NOWHERE..."',
+          url: "https://www.youtube.com/results?search_query=gothamchess+chatgpt+rook+out+of+nowhere",
+          badge: "YouTube Short / Viral Clip",
+          notes: "The iconic GothamChess (Levy Rozman) breakdown where ChatGPT blatantly ignores board geometry, spawns phantom rooks, and gaslights Stockfish. Serves as our visual hook for the presentation introduction."
+        },
+        {
+          id: "SRC-2",
+          category: "levy_video",
+          title: "ChatGPT vs Stockfish: The Most Illegal Game of Chess Ever Played",
+          url: "https://www.youtube.com/watch?v=rSCNW1OCk_M",
+          badge: "Full Length Video (GothamChess)",
+          notes: "Full 15-minute empirical comedy showing omnidirectional bishops, pawns capturing backward, and ChatGPT absorbing its own pieces when threatened. Demonstrates Stage 3 Hallucination Cascade."
+        },
+        {
+          id: "SRC-3",
+          category: "levy_video",
+          title: "AI Bots Arguing & Gaslighting Each Other in Custom Chess (Fable / Multi-Agent)",
+          url: "https://www.youtube.com/results?search_query=gothamchess+ai+chess",
+          badge: "Multi-Agent Showcase",
+          notes: "Highlights what happens when two language models without a strict symbolic referee negotiate board state—resulting in mutual hallucination acceptance."
+        },
+        {
+          id: "SRC-4",
+          category: "interview",
+          title: "Faculty / Researcher Interview #1: Symbolic vs. Autoregressive World Models",
+          url: "https://example.com/interview-recording-01",
+          badge: "Audio Recording (18:40)",
+          notes: "Key quote at 06:15: 'Transformers do not store a 2D array in memory; they reconstruct the board from scratch on every token via attention over action verbs.'"
+        },
+        {
+          id: "SRC-5",
+          category: "interview",
+          title: "Developer Interview #2: Guardrailing Multi-Agent Loops in Production",
+          url: "https://example.com/interview-recording-02",
+          badge: "Interview Transcript & Audio",
+          notes: "Discusses cost/credit burn explosions when two LLM agents enter an illegal-move retry loop at high temperature settings."
+        },
+        {
+          id: "SRC-6",
+          category: "bibliography",
+          title: "Othello-GPT: Emergent World Representations in Sequence Models (Li et al., ICLR)",
+          url: "https://arxiv.org/abs/2210.13382",
+          badge: "Peer-Reviewed Paper",
+          notes: "Foundational study proving that while transformers trained purely on game move transcripts develop nonlinear internal board probes, general-purpose instruction LLMs suffer severe representation decay over long contexts."
+        },
+        {
+          id: "SRC-7",
+          category: "bibliography",
+          title: "Evaluating State Tracking and Spatial Reasoning in Frontier LLMs (2025 Benchmark)",
+          url: "https://arxiv.org",
+          badge: "Annotated Bibliography",
+          notes: "Quantifies token-distance attention decay: every 500 tokens of dialogue between moves increases coordinate drift probability by 14.2%."
+        }
+      ]
+    };
+
+    // --- 2. STATE MANAGEMENT ---
+    const STORAGE_KEY = "HALLUCINATION_CASCADE_PORTAL_DATA_V1";
+    let appData = loadAppData();
+    let activeComparisonGame = "Chess";
+    let activeTrialId = appData.trials[0]?.id || null;
+    let activeSourceFilter = "ALL";
+    let simulatedAdmin = false;
+    let activeStepIndex = 0;
+
+    function loadAppData() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          return JSON.parse(saved);
+        }
+      } catch (e) {
+        console.warn("Could not read localStorage, falling back to default dataset.", e);
+      }
+      return JSON.parse(JSON.stringify(DEFAULT_DATA));
+    }
+
+    function saveAppData() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+      } catch (e) {
+        console.warn("Could not save to localStorage.", e);
+      }
+      refreshAllViews();
+    }
+
+    // --- 3. LOCALHOST DETECTION FOR ADMIN CONSOLE ---
+    function checkAdminAccess() {
+      const host = window.location.hostname;
+      const isLocal = (host === "localhost" || host === "127.0.0.1" || simulatedAdmin);
+      
+      const adminTabBtn = document.getElementById("nav-admin");
+      const hostDisplay = document.getElementById("hostname-display");
+      
+      hostDisplay.textContent = `Host: ${host || 'preview-sandbox'} ${isLocal ? '(Admin Active)' : '(Public Read-Only)'}`;
+      
+      if (isLocal) {
+        adminTabBtn.classList.remove("hidden");
+        adminTabBtn.classList.add("flex");
+      } else {
+        adminTabBtn.classList.add("hidden");
+        adminTabBtn.classList.remove("flex");
+      }
+    }
+
+    function toggleSimulatedAdmin() {
+      simulatedAdmin = !simulatedAdmin;
+      checkAdminAccess();
+      if (simulatedAdmin) {
+        switchTab("admin");
+        showToast("Localhost Admin Console unlocked!");
+      } else {
+        switchTab("home");
+        showToast("Switched to Audience Public View.");
+      }
+    }
+
+    // --- 4. TAB SWITCHING ---
+    function switchTab(tabId) {
+      document.querySelectorAll(".tab-section").forEach(sec => sec.classList.add("hidden"));
+      const target = document.getElementById(`tab-${tabId}`);
+      if (target) target.classList.remove("hidden");
+
+      document.querySelectorAll(".nav-btn").forEach(btn => {
+        if (btn.id === "nav-admin") return;
+        btn.className = "nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 text-wood-umber hover:text-wood-espresso hover:bg-cream-card";
+      });
+
+      const activeBtn = document.getElementById(`nav-${tabId}`);
+      if (activeBtn && tabId !== "admin") {
+        activeBtn.className = "nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 bg-wood-walnut text-cream-bg shadow-sm";
+      }
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      lucide.createIcons();
+    }
+
+    // --- 5. RENDER HOME METRICS ---
+    function renderHomeMetrics() {
+      const totalTrials = appData.trials.length;
+      const avgCollapse = (appData.trials.reduce((acc, t) => acc + Number(t.collapseTurn || 0), 0) / (totalTrials || 1)).toFixed(1);
+      const totalIllegal = appData.trials.reduce((acc, t) => acc + Number(t.illegalMovesCount || 0), 0);
+      const totalCredits = appData.trials.reduce((acc, t) => acc + Number(t.creditsBurned || 0), 0).toFixed(2);
+
+      const metrics = [
+        {
+          label: "Total Trials Logged",
+          value: totalTrials,
+          sub: "Across 4 deterministic games",
+          icon: "swords",
+          accent: "text-wood-walnut"
+        },
+        {
+          label: "Mean Collapse Horizon",
+          value: `Turn ${avgCollapse}`,
+          sub: "Onset of coordinate drift",
+          icon: "flame",
+          accent: "text-wood-terracotta"
+        },
+        {
+          label: "Illegal Moves Recorded",
+          value: totalIllegal,
+          sub: "Phantom spawns & teleports",
+          icon: "alert-triangle",
+          accent: "text-wood-amber"
+        },
+        {
+          label: "API Credits Burned",
+          value: `$${totalCredits}`,
+          sub: "Multi-agent token overhead",
+          icon: "coins",
+          accent: "text-wood-espresso"
+        }
+      ];
+
+      const grid = document.getElementById("home-metrics-grid");
+      grid.innerHTML = metrics.map(m => `
+        <div class="bg-cream-card border border-cream-border rounded-2xl p-5 flex items-start justify-between shadow-sm">
+          <div>
+            <span class="text-xs font-mono uppercase text-wood-umber">${m.label}</span>
+            <div class="font-serif text-3xl font-bold ${m.accent} mt-1">${m.value}</div>
+            <p class="text-xs text-wood-umber mt-1">${m.sub}</p>
+          </div>
+          <div class="p-2.5 rounded-xl bg-cream-bg border border-cream-border ${m.accent}">
+            <i data-lucide="${m.icon}" class="w-5 h-5"></i>
+          </div>
+        </div>
+      `).join("");
+
+      document.getElementById("nav-trial-count").textContent = totalTrials;
+    }
+
+    // --- 6. RENDER AI MODELS COMPARISON ---
+    function renderComparison() {
+      const pillsContainer = document.getElementById("comparison-game-pills");
+      const games = appData.modelsComparison.map(g => g.game);
+
+      pillsContainer.innerHTML = games.map(g => {
+        const active = g === activeComparisonGame;
+        return `
+          <button onclick="selectComparisonGame('${g}')" class="px-4 py-2 rounded-xl text-xs font-mono font-semibold transition-all ${
+            active 
+              ? 'bg-wood-walnut text-cream-bg shadow-sm' 
+              : 'bg-cream-card text-wood-umber border border-cream-border hover:bg-cream-hover'
+          }">
+            ${g}
+          </button>
+        `;
+      }).join("");
+
+      const currentGameObj = appData.modelsComparison.find(g => g.game === activeComparisonGame) || appData.modelsComparison[0];
+      
+      document.getElementById("comparison-game-banner").innerHTML = `
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-wood-walnut/15 text-wood-walnut flex items-center justify-center font-serif font-bold">
+            ${currentGameObj.game[0]}
+          </div>
+          <div>
+            <h3 class="font-serif font-bold text-wood-espresso text-lg">${currentGameObj.game} State Benchmark</h3>
+            <p class="text-xs text-wood-umber">${currentGameObj.description}</p>
+          </div>
+        </div>
+        <span class="text-xs font-mono px-3 py-1 rounded-full bg-cream-bg border border-cream-border text-wood-walnut">
+          ${currentGameObj.models.length} Architectures Evaluated
+        </span>
+      `;
+
+      const modelsGrid = document.getElementById("comparison-models-grid");
+      modelsGrid.innerHTML = currentGameObj.models.map(m => `
+        <div class="bg-cream-card border border-cream-border rounded-2xl p-6 flex flex-col justify-between space-y-5 shadow-sm hover:border-wood-walnut/50 transition-all">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono uppercase px-2.5 py-0.5 rounded bg-cream-bg border border-cream-border text-wood-umber">${m.provider}</span>
+              <span class="text-xs font-mono text-wood-walnut font-semibold">$${m.avgCredits.toFixed(2)} / game</span>
+            </div>
+            <h4 class="font-serif text-2xl font-bold text-wood-espresso">${m.name}</h4>
+            <div class="p-3 rounded-xl bg-cream-bg border border-cream-border space-y-1">
+              <span class="text-[10px] font-mono uppercase text-wood-terracotta font-semibold">Signature Hallucination Archetype</span>
+              <p class="text-xs font-semibold text-wood-espresso">${m.archetype}</p>
+            </div>
+            <p class="text-xs text-wood-umber leading-relaxed">${m.notes}</p>
+          </div>
+
+          <div class="space-y-3 pt-3 border-t border-cream-border">
+            <div class="grid grid-cols-2 gap-3 text-center">
+              <div class="bg-cream-bg p-2.5 rounded-xl border border-cream-border">
+                <div class="text-[10px] font-mono text-wood-umber uppercase">Avg Collapse</div>
+                <div class="font-serif text-xl font-bold text-wood-espresso">Turn ${m.avgCollapseTurn}</div>
+              </div>
+              <div class="bg-cream-bg p-2.5 rounded-xl border border-cream-border">
+                <div class="text-[10px] font-mono text-wood-umber uppercase">Illegal Moves</div>
+                <div class="font-serif text-xl font-bold text-wood-terracotta">${m.illegalMovesPerGame} / gm</div>
+              </div>
+            </div>
+
+            <!-- Stability vs Collapse Bar -->
+            <div class="space-y-1">
+              <div class="flex justify-between text-[11px] font-mono">
+                <span class="text-wood-sage font-semibold">Valid Completion: ${m.validRate}%</span>
+                <span class="text-wood-terracotta font-semibold">Cascade: ${m.collapseRate}%</span>
+              </div>
+              <div class="w-full h-2.5 rounded-full bg-cream-bg overflow-hidden flex border border-cream-border">
+                <div style="width: ${m.validRate}%" class="bg-wood-sage h-full"></div>
+                <div style="width: ${m.collapseRate}%" class="bg-wood-terracotta h-full"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function selectComparisonGame(game) {
+      activeComparisonGame = game;
+      renderComparison();
+    }
+
+    // --- 7. RENDER ALL GAMES (TRIAL EXPLORER & INTERACTIVE BOARD SCRUBBER) ---
+    function populateModelFilterDropdown() {
+      const select = document.getElementById("filter-model");
+      const currentVal = select.value;
+      const uniqueModels = [...new Set(appData.trials.map(t => t.model))];
+      select.innerHTML = `<option value="ALL">All Matchups (${appData.trials.length})</option>` +
+        uniqueModels.map(m => `<option value="${m}">${m}</option>`).join("");
+      if (uniqueModels.includes(currentVal)) select.value = currentVal;
+    }
+
+    function renderTrials() {
+      const gameFilter = document.getElementById("filter-game").value;
+      const modelFilter = document.getElementById("filter-model").value;
+
+      const filtered = appData.trials.filter(t => {
+        const matchGame = gameFilter === "ALL" || t.game === gameFilter;
+        const matchModel = modelFilter === "ALL" || t.model === modelFilter;
+        return matchGame && matchModel;
+      });
+
+      const listEl = document.getElementById("trials-list-container");
+      if (filtered.length === 0) {
+        listEl.innerHTML = `<div class="p-6 rounded-xl bg-cream-card border border-cream-border text-center text-sm text-wood-umber">No trials match this filter.</div>`;
+        document.getElementById("trial-detail-container").innerHTML = `<div class="text-sm text-wood-umber">Select or add a trial to inspect.</div>`;
+        return;
+      }
+
+      if (!filtered.some(t => t.id === activeTrialId)) {
+        activeTrialId = filtered[0].id;
+        activeStepIndex = 0;
+      }
+
+      listEl.innerHTML = filtered.map(t => {
+        const isSelected = t.id === activeTrialId;
+        return `
+          <button onclick="selectTrial('${t.id}')" class="w-full text-left p-4 rounded-xl border transition-all block ${
+            isSelected 
+              ? 'bg-wood-espresso text-cream-bg border-wood-walnut shadow-md' 
+              : 'bg-cream-card text-wood-espresso border-cream-border hover:bg-cream-hover'
+          }">
+            <div class="flex items-center justify-between text-xs font-mono">
+              <span class="${isSelected ? 'text-wood-amber' : 'text-wood-walnut'} font-semibold">${t.id} // ${t.game}</span>
+              <span class="px-2 py-0.5 rounded ${isSelected ? 'bg-wood-terracotta text-cream-bg' : 'bg-wood-terracotta/15 text-wood-terracotta'}">
+                Collapse: Turn ${t.collapseTurn}
+              </span>
+            </div>
+            <h4 class="font-serif font-bold text-base mt-1.5">${t.model}</h4>
+            <p class="text-xs ${isSelected ? 'text-cream-border' : 'text-wood-umber'} mt-1 truncate">
+              Archetype: ${t.archetype}
+            </p>
+            <div class="flex items-center gap-3 mt-3 pt-2 border-t ${isSelected ? 'border-wood-walnut/40 text-cream-border' : 'border-cream-border text-wood-umber'} text-[11px] font-mono">
+              <span>Warmth: ${t.temperature}</span>
+              <span>•</span>
+              <span>Tokens: ${t.maxTokens}</span>
+              <span>•</span>
+              <span>$${Number(t.creditsBurned).toFixed(2)}</span>
+            </div>
+          </button>
+        `;
+      }).join("");
+
+      renderActiveTrialDetail();
+    }
+
+    function selectTrial(id) {
+      activeTrialId = id;
+      activeStepIndex = 0;
+      renderTrials();
+    }
+
+    function stepTrialScrubber(delta) {
+      const trial = appData.trials.find(t => t.id === activeTrialId);
+      if (!trial || !trial.steps) return;
+      activeStepIndex = Math.max(0, Math.min(trial.steps.length - 1, activeStepIndex + delta));
+      renderActiveTrialDetail();
+    }
+
+    function renderActiveTrialDetail() {
+      const trial = appData.trials.find(t => t.id === activeTrialId);
+      const container = document.getElementById("trial-detail-container");
+      if (!trial) return;
+
+      const steps = trial.steps && trial.steps.length > 0 ? trial.steps : [
+        { turn: `Turn ${trial.collapseTurn}`, move: "See Raw PGN Log below", status: "ILLEGAL", note: trial.archetype }
+      ];
+      const currentStep = steps[activeStepIndex] || steps[0];
+
+      container.innerHTML = `
+        <div class="space-y-6">
+          <!-- Header & Metadata Badges -->
+          <div class="border-b border-cream-border pb-4 space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="font-mono text-xs font-bold text-wood-walnut uppercase">${trial.id} • ${trial.game} Benchmark</span>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-semibold bg-wood-terracotta/15 text-wood-terracotta border border-wood-terracotta/30">
+                ${trial.outcome}
+              </span>
+            </div>
+            <h3 class="font-serif text-2xl font-bold text-wood-espresso">${trial.model}</h3>
+            
+            <!-- Telemetry Pills -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
+              <div class="bg-cream-bg px-3 py-2 rounded-lg border border-cream-border">
+                <div class="text-[10px] font-mono text-wood-umber">WARMTH (TEMP)</div>
+                <div class="font-mono font-bold text-sm text-wood-espresso">${trial.temperature}</div>
+              </div>
+              <div class="bg-cream-bg px-3 py-2 rounded-lg border border-cream-border">
+                <div class="text-[10px] font-mono text-wood-umber">MAX TOKENS</div>
+                <div class="font-mono font-bold text-sm text-wood-espresso">${trial.maxTokens}</div>
+              </div>
+              <div class="bg-cream-bg px-3 py-2 rounded-lg border border-cream-border">
+                <div class="text-[10px] font-mono text-wood-umber">CREDITS BURNED</div>
+                <div class="font-mono font-bold text-sm text-wood-walnut">$${Number(trial.creditsBurned).toFixed(2)}</div>
+              </div>
+              <div class="bg-cream-bg px-3 py-2 rounded-lg border border-wood-terracotta/40">
+                <div class="text-[10px] font-mono text-wood-terracotta">ILLEGAL MOVES</div>
+                <div class="font-mono font-bold text-sm text-wood-terracotta">${trial.illegalMovesCount} (Turn ${trial.collapseTurn})</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Open-Source Board Renderer Slot & Interactive State Scrubber -->
+          <div class="bg-cream-bg border border-cream-border rounded-xl p-4 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <i data-lucide="cpu" class="w-4 h-4 text-wood-walnut"></i>
+                <span class="text-xs font-mono font-bold text-wood-espresso uppercase">Open-Source Board Renderer Mount</span>
+              </div>
+              <span class="text-[11px] font-mono text-wood-umber">Feeds <code class="bg-cream-card px-1 rounded">trial.pgnLog</code> into GitHub Repo Viewer</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+              <!-- Mini Tactile Wooden Board Visual Preview (5 cols) -->
+              <div class="sm:col-span-5">
+                <div class="chess-grid w-full max-w-[190px] mx-auto rounded-lg overflow-hidden border-2 border-wood-espresso shadow-inner">
+                  ${generateMiniBoardHTML(activeStepIndex, currentStep.status)}
+                </div>
+              </div>
+
+              <!-- Step Scrubber Controls (7 cols) -->
+              <div class="sm:col-span-7 space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-mono font-bold text-wood-walnut">${currentStep.turn}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                    currentStep.status === 'ILLEGAL' || currentStep.status === 'CASCADE'
+                      ? 'bg-wood-terracotta text-cream-bg'
+                      : 'bg-wood-sage text-cream-bg'
+                  }">${currentStep.status}</span>
+                </div>
+                <div class="p-3 rounded-lg bg-cream-card border border-cream-border font-mono text-xs text-wood-espresso">
+                  ${currentStep.move}
+                </div>
+                <p class="text-xs text-wood-umber leading-relaxed">
+                  ${currentStep.note}
+                </p>
+                <div class="flex items-center justify-between pt-1">
+                  <button onclick="stepTrialScrubber(-1)" ${activeStepIndex === 0 ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg bg-cream-card hover:bg-cream-hover disabled:opacity-40 border border-cream-border text-xs font-mono font-semibold text-wood-espresso">
+                    ← Prev Keyframe
+                  </button>
+                  <span class="text-[11px] font-mono text-wood-umber">Step ${activeStepIndex + 1} of ${steps.length}</span>
+                  <button onclick="stepTrialScrubber(1)" ${activeStepIndex >= steps.length - 1 ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg bg-wood-walnut hover:bg-wood-walnutHover disabled:opacity-40 text-cream-bg text-xs font-mono font-semibold">
+                    Next Keyframe →
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Exact System Prompt Used -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono uppercase text-wood-umber font-semibold">Exact Prompt Dispatched</span>
+              <button onclick="copyText('${encodeURIComponent(trial.promptUsed)}', 'Prompt copied to clipboard!')" class="text-xs font-mono text-wood-walnut hover:underline">Copy Prompt</button>
+            </div>
+            <pre class="p-3.5 rounded-xl bg-wood-espresso text-cream-bg font-mono text-xs whitespace-pre-wrap leading-relaxed overflow-x-auto">${escapeHTML(trial.promptUsed)}</pre>
+          </div>
+
+          <!-- Raw PGN / Move Log -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono uppercase text-wood-umber font-semibold">Complete Move Log / PGN Transcript</span>
+              <button onclick="copyText('${encodeURIComponent(trial.pgnLog)}', 'PGN copied to clipboard!')" class="text-xs font-mono text-wood-walnut hover:underline">Copy PGN</button>
+            </div>
+            <pre class="p-3.5 rounded-xl bg-cream-bg border border-cream-border text-wood-espresso font-mono text-xs whitespace-pre-wrap leading-relaxed">${escapeHTML(trial.pgnLog)}</pre>
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    function generateMiniBoardHTML(stepIdx, status) {
+      let cells = "";
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const isDark = (r + c) % 2 === 1;
+          let bg = isDark ? "bg-[#8B5A36]" : "bg-[#F2ECE1]";
+          let piece = "";
+
+          // Highlight phantom rook teleport square on collapse keyframes
+          if ((status === "ILLEGAL" || status === "CASCADE") && r === 0 && c === 0) {
+            bg = "bg-wood-terracotta animate-pulse";
+            piece = `<span class="text-cream-bg font-bold text-xs">♜!</span>`;
+          } else if (r === 7 && c === 4) {
+            piece = `<span class="text-wood-espresso text-xs">♔</span>`;
+          } else if (r === 0 && c === 4) {
+            piece = `<span class="text-wood-espresso text-xs">♚</span>`;
+          } else if (r === 6 && (c === 0 || c === 5 || c === 6 || c === 7)) {
+            piece = `<span class="text-wood-espresso text-[10px]">♙</span>`;
+          } else if (r === 1 && (c === 1 || c === 5 || c === 6)) {
+            piece = `<span class="text-wood-espresso text-[10px]">♟</span>`;
+          }
+
+          cells += `<div class="${bg} flex items-center justify-center w-full h-full select-none">${piece}</div>`;
+        }
+      }
+      return cells;
+    }
+
+    // --- 8. RENDER SOURCES & LEVY ARCHIVES ---
+    function filterSources(cat) {
+      activeSourceFilter = cat;
+      document.querySelectorAll(".src-filter-btn").forEach(btn => {
+        btn.className = "src-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-cream-card text-wood-umber border border-cream-border hover:bg-cream-hover";
+      });
+      const activeBtn = document.getElementById(`src-btn-${cat}`);
+      if (activeBtn) {
+        activeBtn.className = "src-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-wood-walnut text-cream-bg";
+      }
+      renderSources();
+    }
+
+    function renderSources() {
+      const container = document.getElementById("sources-grid-container");
+      const filtered = appData.sources.filter(s => activeSourceFilter === "ALL" || s.category === activeSourceFilter);
+
+      const categoryLabels = {
+        levy_video: { label: "Levy's Videos (GothamChess)", icon: "video", color: "text-wood-terracotta bg-wood-terracotta/10 border-wood-terracotta/30" },
+        interview: { label: "Interview Recording", icon: "mic", color: "text-wood-amber bg-wood-amber/15 border-wood-amber/30" },
+        bibliography: { label: "Annotated Bibliography", icon: "book-marked", color: "text-wood-walnut bg-wood-walnut/10 border-wood-walnut/30" }
+      };
+
+      container.innerHTML = filtered.map(s => {
+        const meta = categoryLabels[s.category] || categoryLabels.bibliography;
+        return `
+          <div class="bg-cream-card border border-cream-border rounded-2xl p-6 flex flex-col justify-between space-y-4 shadow-sm hover:border-wood-walnut/50 transition-all">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between gap-2">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-semibold border ${meta.color}">
+                  <i data-lucide="${meta.icon}" class="w-3.5 h-3.5"></i> ${meta.label}
+                </span>
+                <span class="text-xs font-mono text-wood-umber">${escapeHTML(s.badge)}</span>
+              </div>
+              <h3 class="font-serif text-xl font-bold text-wood-espresso leading-snug">
+                ${escapeHTML(s.title)}
+              </h3>
+              <p class="text-sm text-wood-umber leading-relaxed bg-cream-bg p-3.5 rounded-xl border border-cream-border">
+                ${escapeHTML(s.notes)}
+              </p>
+            </div>
+            <div class="pt-2 flex items-center justify-between">
+              <span class="text-[11px] font-mono text-wood-umber truncate max-w-[65%]">${escapeHTML(s.url)}</span>
+              <a href="${escapeHTML(s.url)}" target="_blank" rel="noopener noreferrer" class="px-3.5 py-1.5 rounded-lg bg-wood-walnut hover:bg-wood-walnutHover text-cream-bg text-xs font-mono font-semibold transition-colors inline-flex items-center gap-1.5">
+                Open Source <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+              </a>
+            </div>
+          </div>
+        `;
+      }).join("");
+      lucide.createIcons();
+    }
+
+    // --- 9. ADMIN CONSOLE HANDLERS ---
+    function handleAddTrial(e) {
+      e.preventDefault();
+      const newId = `TRIAL-${101 + appData.trials.length}`;
+      const game = document.getElementById("admin-trial-game").value;
+      const model = document.getElementById("admin-trial-model").value.trim();
+      const temperature = parseFloat(document.getElementById("admin-trial-temp").value);
+      const maxTokens = parseInt(document.getElementById("admin-trial-tokens").value, 10);
+      const creditsBurned = parseFloat(document.getElementById("admin-trial-credits").value);
+      const collapseTurn = parseInt(document.getElementById("admin-trial-collapse").value, 10);
+      const illegalMovesCount = parseInt(document.getElementById("admin-trial-illegal").value, 10);
+      const archetype = document.getElementById("admin-trial-archetype").value.trim();
+      const outcome = document.getElementById("admin-trial-outcome").value;
+      const promptUsed = document.getElementById("admin-trial-prompt").value.trim();
+      const pgnLog = document.getElementById("admin-trial-pgn").value.trim();
+
+      const newTrial = {
+        id: newId,
+        game,
+        model,
+        temperature,
+        maxTokens,
+        creditsBurned,
+        collapseTurn,
+        illegalMovesCount,
+        archetype,
+        outcome,
+        promptUsed,
+        pgnLog,
+        steps: [
+          { turn: "Turn 1", move: "Opening Sequence", status: "VALID", note: "Deterministic initialization." },
+          { turn: `Turn ${collapseTurn} (COLLAPSE)`, move: "See PGN Transcript", status: "ILLEGAL", note: archetype }
+        ]
+      };
+
+      appData.trials.unshift(newTrial);
+      activeTrialId = newId;
+      saveAppData();
+      e.target.reset();
+      showToast(`Saved ${newId} (${model}) to database!`);
+      switchTab("trials");
+    }
+
+    function handleAddSource(e) {
+      e.preventDefault();
+      const category = document.getElementById("admin-src-category").value;
+      const title = document.getElementById("admin-src-title").value.trim();
+      const url = document.getElementById("admin-src-url").value.trim();
+      const badge = document.getElementById("admin-src-badge").value.trim();
+      const notes = document.getElementById("admin-src-notes").value.trim();
+
+      appData.sources.unshift({
+        id: `SRC-${Date.now()}`,
+        category,
+        title,
+        url,
+        badge,
+        notes
+      });
+
+      saveAppData();
+      e.target.reset();
+      showToast("Added new entry to Sources & Media!");
+      switchTab("sources");
+    }
+
+    function exportMasterJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+      const dlAnchor = document.createElement("a");
+      dlAnchor.setAttribute("href", dataStr);
+      dlAnchor.setAttribute("download", "hallucination_cascade_dataset.json");
+      document.body.appendChild(dlAnchor);
+      dlAnchor.click();
+      dlAnchor.remove();
+      showToast("Exported master JSON dataset!");
+    }
+
+    function importMasterJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (parsed.trials && parsed.sources) {
+            appData = parsed;
+            saveAppData();
+            showToast("Imported master JSON dataset successfully!");
+          } else {
+            showToast("Invalid JSON structure: missing trials or sources.");
+          }
+        } catch (err) {
+          showToast("Error parsing JSON file.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function resetToDefaultData() {
+      localStorage.removeItem(STORAGE_KEY);
+      appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      activeTrialId = appData.trials[0].id;
+      refreshAllViews();
+      showToast("Restored default starter dataset.");
+    }
+
+    // --- 10. UTILITIES (QR MODAL, CLIPBOARD, TOAST) ---
+    function openQRModal() {
+      const urlInput = document.getElementById("qr-url-input");
+      if (!urlInput.value.trim() && /^https?:$/.test(window.location.protocol)) {
+        urlInput.value = window.location.href.split(/[?#]/)[0];
+      }
+      updateQRUrl(urlInput.value);
+      document.getElementById("qr-modal").classList.remove("hidden");
+    }
+
+    function closeQRModal() {
+      document.getElementById("qr-modal").classList.add("hidden");
+    }
+
+    function updateQRUrl(val) {
+      const image = document.getElementById("qr-image");
+      const url = val.trim();
+      if (!/^https?:\/\/\S+$/i.test(url)) {
+        image.removeAttribute("src");
+        image.classList.add("hidden");
+        return;
+      }
+      const encoded = encodeURIComponent(url);
+      image.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=2A1B12&bgcolor=FAF6F0&data=${encoded}`;
+      image.classList.remove("hidden");
+    }
+
+    function copyPortalUrl() {
+      const val = document.getElementById("qr-url-input").value;
+      if (!/^https?:\/\/\S+$/i.test(val.trim())) {
+        showToast("Enter your hosted project URL first.");
+        return;
+      }
+      copyText(encodeURIComponent(val), "Portal URL copied to clipboard!");
+    }
+
+    function copyText(encodedStr, msg) {
+      const text = decodeURIComponent(encodedStr);
+      const tempInput = document.createElement("textarea");
+      tempInput.value = text;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand("copy");
+      tempInput.remove();
+      showToast(msg);
+    }
+
+    function showToast(message) {
+      const box = document.getElementById("toast-box");
+      document.getElementById("toast-message").textContent = message;
+      box.classList.remove("hidden");
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => {
+        box.classList.add("hidden");
+      }, 3500);
+    }
+
+    function escapeHTML(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function refreshAllViews() {
+      renderHomeMetrics();
+      renderComparison();
+      populateModelFilterDropdown();
+      renderTrials();
+      renderSources();
+      lucide.createIcons();
+    }
+
+    // --- INITIALIZE ON LOAD ---
+    window.onload = function() {
+      checkAdminAccess();
+      refreshAllViews();
+      switchTab("home");
+    };
+  </script>
+</body>
+</html>

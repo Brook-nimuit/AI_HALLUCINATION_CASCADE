@@ -1,0 +1,11 @@
+{
+  "name": "hallucination-cascade-site",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:css",
+    "build:css": "tailwindcss --input ./web/assets/tailwind.css --output ./web/assets/app.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

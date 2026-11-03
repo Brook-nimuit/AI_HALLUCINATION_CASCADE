@@ -1,0 +1,8 @@
+data/local/
+experiments/
+local/
+tests/
+venv/
+.venv/
+node_modules/
+.env*

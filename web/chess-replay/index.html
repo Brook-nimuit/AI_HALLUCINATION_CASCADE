@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weird Index | Headless Chess Replay & Audit Suite</title>
+    <link rel="stylesheet" href="../assets/app.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #12141a; }
+        ::-webkit-scrollbar-thumb { background: #2e323d; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #e63946; }
+    </style>
+</head>
+<body class="bg-chessDark text-gray-100 min-h-screen flex flex-col justify-between p-4 md:p-6">
+
+    <!-- Top Navigation & Matchup Banner -->
+    <header class="w-full max-w-7xl mx-auto mb-5">
+        <div class="bg-chessCard border border-chessBorder rounded-2xl p-4 shadow-xl flex flex-col lg:flex-row items-center justify-between gap-4">
+            
+            <!-- Brand & Title -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-accent/15 border border-accent/40 flex items-center justify-center text-accent font-bold text-xl shadow-inner">
+                    ♞
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-lg md:text-xl font-bold tracking-tight text-white">Weird Index Chess Audit</h1>
+                        <span class="text-[11px] font-mono uppercase bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded border border-zinc-700">State-Tracking Benchmark</span>
+                    </div>
+                    <p class="text-xs text-gray-400">Chronological Ply Replay, Illegal Move Collision Snapshot & Verifiable Prompt Log</p>
+                </div>
+            </div>
+
+            <!-- Folder Loader & Trial Selector -->
+            <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
+                <label for="folderInput" class="cursor-pointer bg-accent hover:bg-red-600 text-white text-xs md:text-sm font-semibold px-4 py-2.5 rounded-xl transition flex items-center gap-2 shadow-lg shadow-accent/20">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                    Load <code class="font-mono bg-black/20 px-1 rounded">data/local</code> Folder
+                </label>
+                <input type="file" id="folderInput" webkitdirectory directory multiple class="hidden">
+
+                <div class="flex items-center gap-2 bg-chessPanel border border-chessBorder rounded-xl px-3 py-1.5">
+                    <span class="text-xs font-medium text-gray-400">Match:</span>
+                    <select id="trialSelect" disabled class="bg-transparent text-gray-100 text-xs md:text-sm font-semibold focus:outline-none disabled:opacity-40 cursor-pointer pr-2">
+                        <option value="" class="bg-chessCard">-- Load Folder First --</option>
+                    </select>
+                </div>
+
+                <button id="btnOpenPromptModal" disabled class="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-gray-200 text-xs md:text-sm font-medium px-3.5 py-2.5 rounded-xl border border-zinc-700 transition flex items-center gap-2">
+                    <svg class="w-4 h-4 text-accentAmber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    Prompt History
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1">
+
+        <!-- LEFT / CENTER COLUMN: Matchup Banner, Board Stage & Controls (8 cols) -->
+        <section class="lg:col-span-8 bg-chessCard border border-chessBorder rounded-2xl p-5 shadow-2xl flex flex-col justify-between">
+            
+            <!-- Matchup Header Bar (Editable Bot Names for Astra 1 vs Astra 2 or LLM vs Random) -->
+            <div class="w-full bg-chessPanel border border-chessBorder rounded-xl p-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                
+                <!-- White Bot -->
+                <div class="flex items-center gap-2.5 w-full sm:w-auto">
+                    <span class="w-6 h-6 rounded-lg bg-white text-black font-bold flex items-center justify-center text-sm shadow">♔</span>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">White Engine (Tested LLM)</span>
+                        <input id="whiteBotInput" type="text" value="openai/gpt-oss-120b" class="bg-transparent text-xs md:text-sm font-mono font-bold text-white focus:outline-none focus:border-b focus:border-accent w-48" title="Click to customize White Bot label">
+                    </div>
+                </div>
+
+                <div class="text-xs font-mono font-bold text-zinc-500 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800">VS</div>
+
+                <!-- Black Bot -->
+                <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end text-right">
+                    <div class="flex flex-col items-end">
+                        <span class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Black Engine (Opponent)</span>
+                        <input id="blackBotInput" type="text" value="Random Legal Baseline" class="bg-transparent text-xs md:text-sm font-mono font-bold text-gray-200 text-right focus:outline-none focus:border-b focus:border-accent w-48" title="Click to customize Black Bot label (e.g. ASTRA 2)">
+                    </div>
+                    <span class="w-6 h-6 rounded-lg bg-zinc-900 text-white border border-zinc-700 font-bold flex items-center justify-center text-sm shadow">♚</span>
+                </div>
+            </div>
+
+            <!-- Active Ply & Bot Attribution Banner -->
+            <div id="turnBanner" class="w-full mb-3 px-4 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900/80 flex flex-wrap items-center justify-between gap-2 transition-colors duration-200">
+                <div class="flex items-center gap-2.5">
+                    <span id="actorBadge" class="text-xs font-mono font-bold uppercase px-2.5 py-1 rounded-md bg-zinc-800 text-gray-300 border border-zinc-700">
+                        STANDBY
+                    </span>
+                    <span id="moveHeadline" class="text-sm md:text-base font-bold text-white font-mono">
+                        Load your weird_index_trials folder to begin
+                    </span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="slideCounterBadge" class="text-xs font-mono text-gray-400 bg-black/30 px-2.5 py-1 rounded-md border border-zinc-800">
+                        Slide 0 / 0
+                    </span>
+                </div>
+            </div>
+
+            <!-- Board / Collision Image Stage -->
+            <div id="imageStageContainer" class="relative w-full h-[380px] sm:h-[460px] md:h-[500px] bg-chessPanel rounded-xl border border-chessBorder flex items-center justify-center overflow-hidden mb-4">
+                
+                <!-- Empty State Instructions -->
+                <div id="placeholderText" class="text-center p-6 max-w-md">
+                    <div class="w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-3 text-2xl">
+                        📂
+                    </div>
+                    <h3 class="text-sm font-semibold text-gray-200 mb-1">Select Your Trial Workspace</h3>
+                    <p class="text-xs text-gray-400 leading-relaxed mb-3">
+                        Click <span class="text-white font-medium">"Load data/local Folder"</span> above and select the local data folder containing <code class="text-amber-300 font-mono">replays/</code> and <code class="text-red-400 font-mono">snapshots/</code>.
+                    </p>
+                    <div class="text-[11px] font-mono text-left bg-zinc-900/90 border border-zinc-800 p-3 rounded-xl text-gray-400 space-y-1">
+                        <div>✓ Auto-merges <span class="text-gray-200">replays/trial_XX</span> + <span class="text-red-400">snapshots/*_trial_XX_*.png</span></div>
+                        <div>✓ Appends the illegal move collision as the final slide</div>
+                        <div>✓ Extracts & reconstructs SAN moves + Prompt History</div>
+                    </div>
+                </div>
+
+                <!-- Active Snapshot Image -->
+                <img id="replayImage" src="" alt="Chess Board State" class="max-w-full max-h-full object-contain hidden transition-all duration-150">
+            </div>
+
+            <!-- Bottom Playback Controls & Scrubber -->
+            <div class="w-full flex flex-col gap-3">
+                
+                <!-- Slider Scrubber -->
+                <div class="w-full flex items-center gap-3 px-1">
+                    <span class="text-xs text-zinc-500 font-mono">Start</span>
+                    <input type="range" id="plySlider" min="0" max="0" value="0" disabled class="w-full accent-accent bg-zinc-800 rounded-lg h-2 cursor-pointer disabled:opacity-30">
+                    <span id="maxPlyLabel" class="text-xs text-red-400 font-mono font-semibold">💥 End</span>
+                </div>
+
+                <!-- Control Buttons Row -->
+                <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <div class="flex items-center gap-2">
+                        <button id="btnFirst" disabled class="p-2.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 rounded-xl border border-zinc-700 transition" title="First Ply (Home)">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
+                        </button>
+                        <button id="btnPrev" disabled class="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 rounded-xl border border-zinc-700 transition font-medium text-xs md:text-sm flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                            Prev
+                        </button>
+                        <button id="btnPlay" disabled class="px-5 py-2 bg-accent hover:bg-red-600 disabled:opacity-30 text-white rounded-xl font-semibold text-xs md:text-sm transition shadow-lg flex items-center gap-2">
+                            <span id="playIcon">▶</span> <span id="playText">Auto-Play</span>
+                        </button>
+                        <button id="btnNext" disabled class="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 rounded-xl border border-zinc-700 transition font-medium text-xs md:text-sm flex items-center gap-1.5">
+                            Next
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                    </div>
+
+                    <!-- Jump Directly to Illegal Move Snapshot -->
+                    <button id="btnJumpFail" disabled class="px-3.5 py-2 bg-red-950/80 hover:bg-red-900/80 text-red-200 border border-red-800/80 disabled:opacity-30 rounded-xl font-semibold text-xs md:text-sm transition flex items-center gap-1.5 shadow">
+                        <span>💥</span> Jump to Illegal Move
+                    </button>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- RIGHT COLUMN: Copyable Move Transcript, Ply Pills & Prompt Preview (4 cols) -->
+        <aside class="lg:col-span-4 flex flex-col gap-5">
+
+            <!-- 1. Copy/Pasteable SAN Move Transcript Card -->
+            <div class="bg-chessCard border border-chessBorder rounded-2xl p-4 shadow-xl flex flex-col">
+                <div class="flex items-center justify-between mb-2.5">
+                    <div>
+                        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                            <span>📋</span> Move Transcript (SAN)
+                        </h2>
+                        <p class="text-[11px] text-gray-400">Copy/paste directly into your paper or analysis board</p>
+                    </div>
+                    <button id="btnCopySAN" disabled class="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-xs font-mono font-semibold text-emerald-400 border border-zinc-700 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
+                        <span id="copySanText">Copy PGN/SAN</span>
+                    </button>
+                </div>
+
+                <!-- Read-only / Selectable Textarea for Easy Copy-Paste -->
+                <textarea id="sanTranscriptBox" readonly rows="4" placeholder="1. e4 e5 2. Nf3 Nc6 ..." class="w-full bg-chessPanel border border-chessBorder rounded-xl p-3 text-xs font-mono text-gray-200 leading-relaxed focus:outline-none focus:border-accent resize-none select-all mb-2"></textarea>
+
+                <!-- Illegal Move Highlight Callout -->
+                <div id="illegalCalloutBox" class="bg-red-950/40 border border-red-900/60 rounded-xl p-3 flex items-start gap-2.5">
+                    <span class="text-base leading-none mt-0.5">⚠️</span>
+                    <div class="text-xs flex-1">
+                        <div class="font-bold text-red-300 uppercase tracking-wider text-[10px]">Terminal State / Failure Mode</div>
+                        <div id="illegalMoveDetail" class="font-mono text-red-200 mt-0.5 break-all">No trial selected</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Interactive Ply-by-Ply Bot Attribution Log -->
+            <div class="bg-chessCard border border-chessBorder rounded-2xl p-4 shadow-xl flex flex-col flex-1 min-h-[220px] max-h-[300px]">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-sm font-bold text-white">Chronological Ply Log</h2>
+                    <span id="totalPliesBadge" class="text-[11px] font-mono text-gray-400">0 Plies</span>
+                </div>
+                <div id="plyListContainer" class="flex-1 overflow-y-auto space-y-1.5 pr-1 font-mono text-xs">
+                    <div class="text-gray-500 text-center py-8 text-xs font-sans">Load a folder to view ply-by-ply bot attribution.</div>
+                </div>
+            </div>
+
+            <!-- 3. Live Prompt Inspector Card (Research Credibility) -->
+            <div class="bg-chessCard border border-chessBorder rounded-2xl p-4 shadow-xl flex flex-col">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-accentAmber animate-pulse"></span>
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-gray-300">Exact Prompt Sent at Current Ply</h2>
+                    </div>
+                    <button id="btnCopyCurrentPrompt" disabled class="text-[11px] font-mono text-accentAmber hover:underline disabled:opacity-40">
+                        Copy Prompt
+                    </button>
+                </div>
+                <pre id="livePromptPreview" class="bg-chessPanel border border-chessBorder rounded-xl p-3 text-[11px] font-mono text-gray-300 overflow-x-auto whitespace-pre-wrap max-h-32 leading-relaxed">Select any ply to inspect the exact system + user prompt state fed to the model.</pre>
+            </div>
+
+        </aside>
+    </main>
+
+    <!-- ================= CREDIBLE PROMPT HISTORY & AUDIT MODAL ================= -->
+    <div id="promptModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-chessCard border border-chessBorder rounded-2xl max-w-4xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+            
+            <!-- Modal Header -->
+            <div class="p-4 md:p-5 border-b border-chessBorder flex items-center justify-between bg-chessPanel">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-base md:text-lg font-bold text-white">Verifiable Prompt History & Audit Log</h3>
+                        <span class="text-[11px] font-mono bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded">Reproducibility Record</span>
+                    </div>
+                    <p id="modalSubtitle" class="text-xs text-gray-400 mt-0.5">Complete chronological transcript of prompts sent to the LLM during this trial.</p>
+                </div>
+                <button id="btnClosePromptModal" class="p-2 text-gray-400 hover:text-white rounded-lg bg-zinc-800 hover:bg-zinc-700 transition">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-5 overflow-y-auto space-y-4 font-mono text-xs flex-1" id="modalAuditBody">
+                <!-- Populated dynamically -->
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 border-t border-chessBorder bg-chessPanel flex flex-wrap items-center justify-between gap-3">
+                <span class="text-xs text-gray-400">Can be cited or attached as supplementary material for your Weird Index study.</span>
+                <div class="flex items-center gap-2.5">
+                    <button id="btnCopyFullAudit" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-gray-200 rounded-xl border border-zinc-700 text-xs font-semibold transition">
+                        Copy Full Audit Log
+                    </button>
+                    <button id="btnDownloadAudit" class="px-4 py-2 bg-accent hover:bg-red-600 text-white rounded-xl text-xs font-semibold transition shadow-lg">
+                        Download Audit (.txt)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="w-full max-w-7xl mx-auto mt-6 pt-4 border-t border-chessBorder/60 flex flex-col sm:flex-row items-center justify-between text-xs text-zinc-500 gap-2">
+        <div>Weird Index Benchmark Suite &bull; Headless Chess State-Tracking & Spatial Drift Visualizer</div>
+        <div class="font-mono text-[11px]">Supports Legacy (<code class="text-zinc-400">replays/ + snapshots/</code>) & Unified Match Subfolders</div>
+    </footer>
+
+    <!-- Application Logic -->
+    <script>
+        const DEFAULT_SYSTEM_PROMPT = `You are an engine playing headless chess.
+You will receive the chronological move history in standard algebraic notation (SAN).
+Determine the board state and output ONLY your next move in valid standard algebraic notation.
+Do not write explanations, commentary, sentences, punctuation, or move numbers.
+Output exactly ONE move token (e.g. e4, Nf3, Bxc6, O-O, Qh4#).`;
+
+        // Data store keyed by canonical trial key (e.g., "trial_01" or "openai_gpt-oss-120b_trial_01")
+        let trialsMap = {};
+        let csvMetadataMap = {}; // Optional parsed rows from chess_results_*.csv if present in root folder
+        let activeTrialKey = null;
+        let currentIndex = 0;
+        let isPlaying = false;
+        let playInterval = null;
+
+        // DOM Elements
+        const folderInput = document.getElementById('folderInput');
+        const trialSelect = document.getElementById('trialSelect');
+        const whiteBotInput = document.getElementById('whiteBotInput');
+        const blackBotInput = document.getElementById('blackBotInput');
+        const turnBanner = document.getElementById('turnBanner');
+        const actorBadge = document.getElementById('actorBadge');
+        const moveHeadline = document.getElementById('moveHeadline');
+        const slideCounterBadge = document.getElementById('slideCounterBadge');
+        const replayImage = document.getElementById('replayImage');
+        const placeholderText = document.getElementById('placeholderText');
+        const plySlider = document.getElementById('plySlider');
+        const maxPlyLabel = document.getElementById('maxPlyLabel');
+
+        const btnFirst = document.getElementById('btnFirst');
+        const btnPrev = document.getElementById('btnPrev');
+        const btnPlay = document.getElementById('btnPlay');
+        const btnNext = document.getElementById('btnNext');
+        const btnJumpFail = document.getElementById('btnJumpFail');
+        const playIcon = document.getElementById('playIcon');
+        const playText = document.getElementById('playText');
+
+        const sanTranscriptBox = document.getElementById('sanTranscriptBox');
+        const illegalMoveDetail = document.getElementById('illegalMoveDetail');
+        const plyListContainer = document.getElementById('plyListContainer');
+        const totalPliesBadge = document.getElementById('totalPliesBadge');
+        const livePromptPreview = document.getElementById('livePromptPreview');
+
+        const btnCopySAN = document.getElementById('btnCopySAN');
+        const copySanText = document.getElementById('copySanText');
+        const btnCopyCurrentPrompt = document.getElementById('btnCopyCurrentPrompt');
+
+        // Modal Elements
+        const promptModal = document.getElementById('promptModal');
+        const btnOpenPromptModal = document.getElementById('btnOpenPromptModal');
+        const btnClosePromptModal = document.getElementById('btnClosePromptModal');
+        const modalAuditBody = document.getElementById('modalAuditBody');
+        const modalSubtitle = document.getElementById('modalSubtitle');
+        const btnCopyFullAudit = document.getElementById('btnCopyFullAudit');
+        const btnDownloadAudit = document.getElementById('btnDownloadAudit');
+
+        // Helper for clipboard copy (iframe safe)
+        function copyTextToClipboard(text, buttonEl, originalLabel) {
+            const temp = document.createElement('textarea');
+            temp.value = text;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+
+            if (buttonEl) {
+                const prev = buttonEl.innerText;
+                buttonEl.innerText = "✓ Copied!";
+                setTimeout(() => { buttonEl.innerText = originalLabel || prev; }, 1600);
+            }
+        }
+
+        // Parse simple CSV lines for failure reasons & model names
+        function parseCSVText(csvText) {
+            const lines = csvText.split(/\r?\n/).filter(l => l.trim().length > 0);
+            if (lines.length < 2) return;
+            for (let i = 1; i < lines.length; i++) {
+                // Match trial_id,model,plies_survived,failed,failure_reason,raw_response
+                const match = lines[i].match(/^(\d+),([^,]+),(\d+),(\d+),"?([^"]*)"?,?(.*)$/);
+                if (match) {
+                    const padId = String(parseInt(match[1], 10)).padStart(2, '0');
+                    csvMetadataMap[`trial_${padId}`] = {
+                        trialId: padId,
+                        model: match[2],
+                        pliesSurvived: parseInt(match[3], 10),
+                        failed: parseInt(match[4], 10) === 1,
+                        failureReason: match[5],
+                        rawMove: (match[6] || '').replace(/^"|"$/g, '')
+                    };
+                }
+            }
+        }
+
+        // Extract move from image OCR/filename if available
+        function parseReplayFilename(filename) {
+            // Supports both:
+            // 1) New format: ply_01_white_e4.png or ply_42_FAIL_d7.png
+            // 2) Legacy format: ply_01_white.png
+            const failMatch = filename.match(/ply_(\d+)_FAIL_([^.]+)\.png/i);
+            if (failMatch) {
+                return {
+                    plyNum: parseInt(failMatch[1], 10),
+                    actor: 'FAILURE',
+                    moveSan: failMatch[2],
+                    isFailure: true
+                };
+            }
+
+            const moveMatch = filename.match(/ply_(\d+)_(start|white|black)(?:_([^.]+))?\.png/i);
+            if (moveMatch) {
+                return {
+                    plyNum: parseInt(moveMatch[1], 10),
+                    actor: moveMatch[2].toLowerCase(),
+                    moveSan: moveMatch[3] ? moveMatch[3] : null,
+                    isFailure: false
+                };
+            }
+            return null;
+        }
+
+        // Handle Folder Upload
+        folderInput.addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            if (!files.length) return;
+
+            trialsMap = {};
+            csvMetadataMap = {};
+            let legacySnapshots = [];
+
+            // Step 1: First pass for CSV files and match_audit.json files
+            const jsonFiles = {};
+            for (const file of files) {
+                if (
+                    file.name.endsWith('.csv') &&
+                    (file.name.includes('chess_results') || file.name.startsWith('chess_'))
+                ) {
+                    const txt = await file.text();
+                    parseCSVText(txt);
+                } else if (file.name === 'match_audit.json') {
+                    try {
+                        const data = JSON.parse(await file.text());
+                        const pathParts = file.webkitRelativePath.split('/');
+                        const folderName = pathParts[pathParts.length - 2];
+                        jsonFiles[folderName] = data;
+                    } catch (err) {
+                        console.warn("Could not parse match_audit.json", err);
+                    }
+                }
+            }
+
+            // Step 2: Collect all replay images and legacy snapshots
+            for (const file of files) {
+                if (!file.name.endsWith('.png')) continue;
+                const pathParts = file.webkitRelativePath.split('/');
+
+                // Check if inside snapshots/ folder (Legacy collision images)
+                if (pathParts.includes('snapshots')) {
+                    // e.g. openai_gpt-oss-120b_trial_01_ply_42.png
+                    const m = file.name.match(/^(.*)_trial_(\d+)_ply_(\d+)(?:_([^.]+))?\.png$/i);
+                    if (m) {
+                        legacySnapshots.push({
+                            modelPrefix: m[1].replace(/_/g, '/'),
+                            trialNumStr: m[2].padStart(2, '0'),
+                            plyNum: parseInt(m[3], 10),
+                            moveSan: m[4] || null,
+                            file: file,
+                            url: URL.createObjectURL(file)
+                        });
+                    }
+                    continue;
+                }
+
+                // Check if inside a trial subfolder (e.g. replays/trial_01 or replays/gpt-oss-120b_trial_01)
+                const trialFolder = pathParts.find(p => p.includes('trial_'));
+                if (trialFolder) {
+                    const tMatch = trialFolder.match(/trial_(\d+)/i);
+                    const trialNumStr = tMatch ? tMatch[1].padStart(2, '0') : '01';
+                    const key = trialFolder;
+
+                    if (!trialsMap[key]) {
+                        trialsMap[key] = {
+                            key: key,
+                            trialNumStr: trialNumStr,
+                            displayName: trialFolder.replace(/_/g, ' ').toUpperCase(),
+                            whiteBot: "openai/gpt-oss-120b",
+                            blackBot: "Random Legal Baseline",
+                            frames: [],
+                            auditJson: jsonFiles[trialFolder] || null
+                        };
+                    }
+
+                    const parsed = parseReplayFilename(file.name);
+                    if (parsed) {
+                        trialsMap[key].frames.push({
+                            plyNum: parsed.plyNum,
+                            actor: parsed.actor,
+                            moveSan: parsed.moveSan,
+                            isFailure: parsed.isFailure,
+                            filename: file.name,
+                            url: URL.createObjectURL(file)
+                        });
+                    }
+                }
+            }
+
+            // Step 3: Merge legacy snapshots into their corresponding trial_XX folders!
+            legacySnapshots.forEach(snap => {
+                const modelPrefix = snap.modelPrefix.replace(/\//g, '_').toLowerCase();
+                let targetKey = Object.keys(trialsMap).find(k =>
+                    trialsMap[k].trialNumStr === snap.trialNumStr &&
+                    k.toLowerCase().startsWith(modelPrefix)
+                );
+
+                // If the user only had snapshots without a replay folder, create a virtual trial entry
+                if (!targetKey) {
+                    targetKey = `${modelPrefix}_trial_${snap.trialNumStr}`;
+                    trialsMap[targetKey] = {
+                        key: targetKey,
+                        trialNumStr: snap.trialNumStr,
+                        displayName: `TRIAL ${snap.trialNumStr} (${snap.modelPrefix})`,
+                        whiteBot: snap.modelPrefix,
+                        blackBot: "Random Legal Baseline",
+                        frames: [],
+                        auditJson: null
+                    };
+                }
+
+                const trialObj = trialsMap[targetKey];
+                const csvMeta = csvMetadataMap[`trial_${snap.trialNumStr}`];
+                if (csvMeta && csvMeta.model) {
+                    trialObj.whiteBot = csvMeta.model;
+                }
+
+                // Determine illegal move token from CSV if available
+                let illegalToken = snap.moveSan || (csvMeta ? csvMeta.rawMove : null) || "Illegal Move";
+                let failureDesc = csvMeta ? csvMeta.failureReason : `Illegal Move / Spatial Drift Collision at Ply ${snap.plyNum}`;
+
+                // Avoid duplicate failure frame if already inside unified folder
+                const alreadyHasFail = trialObj.frames.some(f => f.isFailure);
+                if (!alreadyHasFail) {
+                    trialObj.frames.push({
+                        plyNum: snap.plyNum,
+                        actor: 'failure',
+                        moveSan: illegalToken,
+                        failureDesc: failureDesc,
+                        isFailure: true,
+                        filename: snap.file.name,
+                        url: snap.url
+                    });
+                }
+            });
+
+            // Step 4: Sort frames in each trial and enrich from auditJson / CSV
+            Object.values(trialsMap).forEach(trial => {
+                trial.frames.sort((a, b) => {
+                    if (a.plyNum !== b.plyNum) return a.plyNum - b.plyNum;
+                    if (a.isFailure) return 1;
+                    if (b.isFailure) return -1;
+                    return 0;
+                });
+
+                const csvMeta = csvMetadataMap[`trial_${trial.trialNumStr}`];
+                if (trial.auditJson) {
+                    trial.whiteBot = trial.auditJson.white_bot || trial.whiteBot;
+                    trial.blackBot = trial.auditJson.black_bot || trial.blackBot;
+                    trial.failureReason = trial.auditJson.failure_reason || "";
+                    const auditMoves = Array.isArray(trial.auditJson.moves)
+                        ? trial.auditJson.moves
+                        : (trial.auditJson.ply_log || []);
+                    const illegalMove = auditMoves.find(move => move.status === "ILLEGAL");
+                    trial.illegalMoveToken = illegalMove?.san || trial.auditJson.illegal_move || "";
+
+                    // Map SAN moves from auditJson onto frames by plyNum
+                    const logByPly = {};
+                    auditMoves.forEach(entry => {
+                        logByPly[entry.ply] = entry;
+                    });
+                    const promptsByPly = {};
+                    (trial.auditJson.prompts || []).forEach(entry => {
+                        promptsByPly[entry.ply] = entry;
+                    });
+                    trial.frames.forEach(f => {
+                        const move = logByPly[f.plyNum];
+                        const prompt = promptsByPly[f.plyNum];
+                        if (!f.isFailure && move) {
+                            f.moveSan = move.san;
+                            f.botName = move.bot;
+                            f.promptSent = prompt?.user_prompt || move.prompt;
+                        } else if (f.isFailure) {
+                            f.moveSan = move?.san || trial.illegalMoveToken || f.moveSan;
+                            f.actor = move?.actor?.toLowerCase() || f.actor;
+                            f.failureDesc = move?.reason || trial.auditJson.failure_reason || f.failureDesc;
+                            f.promptSent = prompt?.user_prompt || trial.auditJson.failure_prompt || "";
+                        }
+                    });
+                } else if (csvMeta) {
+                    trial.whiteBot = csvMeta.model || trial.whiteBot;
+                    trial.failureReason = csvMeta.failureReason;
+                    trial.illegalMoveToken = csvMeta.rawMove;
+                }
+            });
+
+            // Populate dropdown
+            const sortedKeys = Object.keys(trialsMap).sort();
+            trialSelect.innerHTML = '';
+            if (sortedKeys.length === 0) {
+                trialSelect.innerHTML = '<option value="">No valid trial folders found</option>';
+                trialSelect.disabled = true;
+                return;
+            }
+
+            sortedKeys.forEach(k => {
+                const t = trialsMap[k];
+                const hasFail = t.frames.some(f => f.isFailure);
+                const opt = document.createElement('option');
+                opt.value = k;
+                opt.textContent = `${t.displayName} (${t.frames.length} slides${hasFail ? ' • 💥 Collision' : ''})`;
+                trialSelect.appendChild(opt);
+            });
+
+            trialSelect.disabled = false;
+            btnOpenPromptModal.disabled = false;
+            btnCopySAN.disabled = false;
+            btnCopyCurrentPrompt.disabled = false;
+
+            // Automatically load the first trial
+            loadTrial(sortedKeys[0]);
+        });
+
+        trialSelect.addEventListener('change', (e) => {
+            if (e.target.value) loadTrial(e.target.value);
+        });
+
+        // Re-render labels if user edits White/Black Bot names
+        whiteBotInput.addEventListener('input', () => {
+            if (activeTrialKey && trialsMap[activeTrialKey]) {
+                trialsMap[activeTrialKey].whiteBot = whiteBotInput.value.trim() || "White Bot";
+                updateStage();
+                renderPlyList();
+            }
+        });
+
+        blackBotInput.addEventListener('input', () => {
+            if (activeTrialKey && trialsMap[activeTrialKey]) {
+                trialsMap[activeTrialKey].blackBot = blackBotInput.value.trim() || "Black Bot";
+                updateStage();
+                renderPlyList();
+            }
+        });
+
+        function loadTrial(key) {
+            stopPlayback();
+            activeTrialKey = key;
+            const trial = trialsMap[key];
+            if (!trial || !trial.frames.length) return;
+
+            whiteBotInput.value = trial.whiteBot;
+            blackBotInput.value = trial.blackBot;
+
+            currentIndex = 0;
+            plySlider.max = trial.frames.length - 1;
+            plySlider.value = 0;
+            plySlider.disabled = false;
+
+            const lastFrame = trial.frames[trial.frames.length - 1];
+            maxPlyLabel.textContent = lastFrame.isFailure ? `💥 Ply ${lastFrame.plyNum} (Illegal)` : `Ply ${lastFrame.plyNum}`;
+
+            btnFirst.disabled = false;
+            btnPrev.disabled = false;
+            btnPlay.disabled = false;
+            btnNext.disabled = false;
+            btnJumpFail.disabled = false;
+
+            buildTranscriptAndPrompts(trial);
+            renderPlyList();
+            updateStage();
+        }
+
+        // Reconstruct chronological SAN transcript and per-ply prompts
+        function buildTranscriptAndPrompts(trial) {
+            let pairs = [];
+            trial.frames.forEach((frame, idx) => {
+                if (frame.plyNum === 0 && !frame.isFailure) {
+                    frame.reconstructedPrompt = `The board is in the starting position. You play White. Your move:`;
+                    return;
+                }
+
+                const moveToken = frame.moveSan || `[Ply${frame.plyNum}_Move]`;
+
+                if (frame.isFailure) {
+                    const historyStr = pairs.join(' ');
+                    frame.reconstructedPrompt = frame.promptSent || (historyStr
+                        ? `Move history:\n${historyStr}\n\nYour move:`
+                        : `The board is in the starting position. You play White. Your move:`);
+                    return;
+                }
+
+                // Prompt BEFORE this move was made
+                const historyBeforeMove = pairs.join(' ');
+                frame.reconstructedPrompt = frame.promptSent || (historyBeforeMove
+                    ? `Move history:\n${historyBeforeMove}\n\nYour move:`
+                    : `The board is in the starting position. You play White. Your move:`);
+
+                if (frame.actor === 'white') {
+                    const moveNum = Math.floor((frame.plyNum - 1) / 2) + 1;
+                    pairs.push(`${moveNum}. ${moveToken}`);
+                } else if (frame.actor === 'black') {
+                    if (pairs.length > 0) {
+                        pairs[pairs.length - 1] += ` ${moveToken}`;
+                    } else {
+                        pairs.push(`1... ${moveToken}`);
+                    }
+                }
+            });
+
+            const failFrame = trial.frames.find(f => f.isFailure);
+            let fullTranscript = pairs.join(' ');
+            if (failFrame) {
+                const illegalSan = failFrame.moveSan || trial.illegalMoveToken || "ILLEGAL";
+                const moveNum = Math.ceil(failFrame.plyNum / 2);
+                const movePrefix = failFrame.actor === 'black' ? `${moveNum}...` : `${moveNum}.`;
+                fullTranscript += (fullTranscript ? ' ' : '') + `${movePrefix} [ILLEGAL: ${illegalSan}]`;
+                illegalMoveDetail.textContent = failFrame.failureDesc || `At Ply ${failFrame.plyNum}, ${trial.whiteBot} attempted illegal move '${illegalSan}'.`;
+            } else if (trial.auditJson && trial.auditJson.failed) {
+                illegalMoveDetail.textContent = trial.failureReason || "Trial stopped after an API error.";
+            } else {
+                illegalMoveDetail.textContent = `Survived (${trial.frames.length - 1} plies completed without illegal move snapshot).`;
+            }
+
+            // Check if any non-failure moves had unknown SAN (legacy filenames without move suffix)
+            const hasUnknownMoves = trial.frames.some(f => f.plyNum > 0 && !f.isFailure && !f.moveSan);
+            if (hasUnknownMoves && !trial.auditJson) {
+                fullTranscript += `\n\n[Note: Legacy replay images detected. The exact SAN move is visible in the top title of each board image. Re-running with the updated run_chess_trials.py saves match_audit.json for 1-click PGN text!]`;
+            }
+
+            sanTranscriptBox.value = fullTranscript || "No moves recorded.";
+        }
+
+        function renderPlyList() {
+            const trial = trialsMap[activeTrialKey];
+            if (!trial) return;
+
+            plyListContainer.innerHTML = '';
+            totalPliesBadge.textContent = `${trial.frames.length} Slides`;
+
+            trial.frames.forEach((frame, idx) => {
+                const btn = document.createElement('button');
+                const isSelected = (idx === currentIndex);
+
+                let badgeLabel = "";
+                let rowStyle = "";
+                let moveText = frame.moveSan ? frame.moveSan : (frame.plyNum === 0 ? "Initial Board" : `Ply ${frame.plyNum} Snapshot`);
+
+                if (frame.isFailure) {
+                    badgeLabel = `💥 ${trial.whiteBot}`;
+                    moveText = `ILLEGAL: ${frame.moveSan || 'Hallucination'}`;
+                    rowStyle = isSelected
+                        ? "bg-red-900/80 border-red-500 text-white"
+                        : "bg-red-950/40 hover:bg-red-950/70 border-red-900/60 text-red-300";
+                } else if (frame.plyNum === 0) {
+                    badgeLabel = "START";
+                    rowStyle = isSelected
+                        ? "bg-zinc-700 border-zinc-400 text-white"
+                        : "bg-chessPanel hover:bg-zinc-800/70 border-chessBorder text-gray-300";
+                } else if (frame.actor === 'white') {
+                    badgeLabel = `♔ ${trial.whiteBot}`;
+                    rowStyle = isSelected
+                        ? "bg-zinc-700 border-accent text-white"
+                        : "bg-chessPanel hover:bg-zinc-800/70 border-chessBorder text-gray-200";
+                } else {
+                    badgeLabel = `♚ ${trial.blackBot}`;
+                    rowStyle = isSelected
+                        ? "bg-zinc-700 border-accentAmber text-white"
+                        : "bg-chessPanel hover:bg-zinc-800/70 border-chessBorder text-gray-400";
+                }
+
+                btn.className = `w-full text-left px-3 py-2 rounded-xl border transition flex items-center justify-between gap-2 ${rowStyle}`;
+                btn.innerHTML = `
+                    <div class="flex items-center gap-2 truncate">
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-black/40 font-semibold truncate max-w-[130px]">${badgeLabel}</span>
+                        <span class="font-bold truncate">${moveText}</span>
+                    </div>
+                    <span class="text-[10px] opacity-75 shrink-0">Ply ${String(frame.plyNum).padStart(2, '0')}</span>
+                `;
+                btn.onclick = () => {
+                    stopPlayback();
+                    currentIndex = idx;
+                    updateStage();
+                };
+                plyListContainer.appendChild(btn);
+            });
+        }
+
+        function updateStage() {
+            const trial = trialsMap[activeTrialKey];
+            if (!trial || !trial.frames.length) return;
+
+            const frame = trial.frames[currentIndex];
+            replayImage.src = frame.url;
+            replayImage.classList.remove('hidden');
+            placeholderText.classList.add('hidden');
+
+            plySlider.value = currentIndex;
+            slideCounterBadge.textContent = `Slide ${currentIndex + 1} / ${trial.frames.length}`;
+
+            // Update Top Attribution Banner based on current slide
+            if (frame.isFailure) {
+                turnBanner.className = "w-full mb-3 px-4 py-2.5 rounded-xl border border-red-600 bg-red-950/70 flex flex-wrap items-center justify-between gap-2 shadow-lg shadow-red-950/50";
+                actorBadge.className = "text-xs font-mono font-bold uppercase px-2.5 py-1 rounded-md bg-red-600 text-white";
+                const failingSide = frame.actor === 'black' ? 'BLACK' : 'WHITE';
+                const failingBot = frame.actor === 'black' ? trial.blackBot : trial.whiteBot;
+                actorBadge.textContent = `💥 ILLEGAL MOVE BY ${failingSide} (${failingBot})`;
+                moveHeadline.className = "text-sm md:text-base font-bold text-red-200 font-mono";
+                moveHeadline.textContent = `Ply ${frame.plyNum} Collision — Attempted: '${frame.moveSan || 'Illegal SAN'}'`;
+            } else if (frame.plyNum === 0) {
+                turnBanner.className = "w-full mb-3 px-4 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900/80 flex flex-wrap items-center justify-between gap-2";
+                actorBadge.className = "text-xs font-mono font-bold uppercase px-2.5 py-1 rounded-md bg-zinc-800 text-gray-300 border border-zinc-700";
+                actorBadge.textContent = "INITIAL STATE";
+                moveHeadline.className = "text-sm md:text-base font-bold text-white font-mono";
+                moveHeadline.textContent = `Ply 00 — Starting Board (${trial.whiteBot} vs ${trial.blackBot})`;
+            } else if (frame.actor === 'white') {
+                turnBanner.className = "w-full mb-3 px-4 py-2.5 rounded-xl border border-emerald-800/70 bg-emerald-950/30 flex flex-wrap items-center justify-between gap-2";
+                actorBadge.className = "text-xs font-mono font-bold uppercase px-2.5 py-1 rounded-md bg-white text-black";
+                actorBadge.textContent = `♔ WHITE: ${trial.whiteBot}`;
+                moveHeadline.className = "text-sm md:text-base font-bold text-white font-mono";
+                moveHeadline.textContent = `Ply ${String(frame.plyNum).padStart(2, '0')} ${frame.moveSan ? '— Played: ' + frame.moveSan : '(Valid Move)'}`;
+            } else {
+                turnBanner.className = "w-full mb-3 px-4 py-2.5 rounded-xl border border-amber-800/60 bg-amber-950/25 flex flex-wrap items-center justify-between gap-2";
+                actorBadge.className = "text-xs font-mono font-bold uppercase px-2.5 py-1 rounded-md bg-zinc-900 text-amber-300 border border-amber-700/60";
+                actorBadge.textContent = `♚ BLACK: ${trial.blackBot}`;
+                moveHeadline.className = "text-sm md:text-base font-bold text-amber-100 font-mono";
+                moveHeadline.textContent = `Ply ${String(frame.plyNum).padStart(2, '0')} ${frame.moveSan ? '— Played: ' + frame.moveSan : '(Opponent Move)'}`;
+            }
+
+            // Update Live Prompt Preview
+            const sysHeader = `[SYSTEM PROMPT]\n${DEFAULT_SYSTEM_PROMPT}\n\n[USER PROMPT @ PLY ${frame.plyNum}]\n${frame.reconstructedPrompt || ''}`;
+            livePromptPreview.textContent = sysHeader;
+
+            // Highlight active item in Ply List
+            renderPlyList();
+        }
+
+        // Navigation Listeners
+        btnFirst.addEventListener('click', () => { stopPlayback(); currentIndex = 0; updateStage(); });
+        btnPrev.addEventListener('click', () => { stopPlayback(); if (currentIndex > 0) { currentIndex--; updateStage(); } });
+        btnNext.addEventListener('click', () => {
+            stopPlayback();
+            const trial = trialsMap[activeTrialKey];
+            if (trial && currentIndex < trial.frames.length - 1) { currentIndex++; updateStage(); }
+        });
+        btnJumpFail.addEventListener('click', () => {
+            stopPlayback();
+            const trial = trialsMap[activeTrialKey];
+            if (trial && trial.frames.length) {
+                currentIndex = trial.frames.length - 1;
+                updateStage();
+            }
+        });
+        plySlider.addEventListener('input', (e) => {
+            stopPlayback();
+            currentIndex = parseInt(e.target.value, 10);
+            updateStage();
+        });
+
+        // Auto-Play
+        btnPlay.addEventListener('click', () => {
+            if (isPlaying) stopPlayback(); else startPlayback();
+        });
+
+        function startPlayback() {
+            const trial = trialsMap[activeTrialKey];
+            if (!trial || trial.frames.length <= 1) return;
+            if (currentIndex >= trial.frames.length - 1) currentIndex = 0;
+
+            isPlaying = true;
+            playIcon.textContent = "❚❚";
+            playText.textContent = "Pause";
+            playInterval = setInterval(() => {
+                if (currentIndex < trial.frames.length - 1) {
+                    currentIndex++;
+                    updateStage();
+                } else {
+                    stopPlayback();
+                }
+            }, 850);
+        }
+
+        function stopPlayback() {
+            isPlaying = false;
+            playIcon.textContent = "▶";
+            playText.textContent = "Auto-Play";
+            if (playInterval) { clearInterval(playInterval); playInterval = null; }
+        }
+
+        // Copy Buttons
+        btnCopySAN.addEventListener('click', () => {
+            copyTextToClipboard(sanTranscriptBox.value, copySanText, "Copy PGN/SAN");
+        });
+
+        btnCopyCurrentPrompt.addEventListener('click', () => {
+            copyTextToClipboard(livePromptPreview.textContent, btnCopyCurrentPrompt, "Copy Prompt");
+        });
+
+        // Prompt Audit Modal Logic
+        function generateFullAuditText(trial) {
+            let lines = [];
+            lines.push(`====================================================================`);
+            lines.push(`WEIRD INDEX HEADLESS CHESS — VERIFIABLE PROMPT & STATE AUDIT LOG`);
+            lines.push(`Match ID: ${trial.displayName}`);
+            lines.push(`White Engine (Evaluated): ${trial.whiteBot}`);
+            lines.push(`Black Engine (Opponent):  ${trial.blackBot}`);
+            lines.push(`====================================================================\n`);
+            lines.push(`--- [1] SYSTEM PROMPT (Constant Across All Plies) ---`);
+            lines.push(DEFAULT_SYSTEM_PROMPT);
+            lines.push(`\n--- [2] CHRONOLOGICAL MOVE & PROMPT TRANSCRIPT ---`);
+
+            trial.frames.forEach(f => {
+                if (f.plyNum === 0 && !f.isFailure) return;
+                if (f.isFailure) {
+                    lines.push(`\n[PLY ${String(f.plyNum).padStart(2, '0')} — CRITICAL FAILURE / HALLUCINATION (${trial.whiteBot})]`);
+                    lines.push(`Prompt Sent to Model:\n  ${(f.reconstructedPrompt || '').replace(/\n/g, '\n  ')}`);
+                    lines.push(`Model Illegal Output: '${f.moveSan || 'Illegal Move'}'`);
+                    lines.push(`Diagnostic Details:   ${f.failureDesc || 'Illegal SAN / Spatial Drift'}`);
+                } else if (f.actor === 'white') {
+                    lines.push(`\n[PLY ${String(f.plyNum).padStart(2, '0')} — WHITE (${trial.whiteBot})]`);
+                    lines.push(`Prompt Sent to Model:\n  ${(f.reconstructedPrompt || '').replace(/\n/g, '\n  ')}`);
+                    lines.push(`Validated SAN Output: ${f.moveSan || '(See board snapshot title)'}`);
+                } else {
+                    lines.push(`\n[PLY ${String(f.plyNum).padStart(2, '0')} — BLACK (${trial.blackBot})]`);
+                    lines.push(`Opponent Move Applied: ${f.moveSan || '(See board snapshot title)'}`);
+                }
+            });
+
+            return lines.join('\n');
+        }
+
+        btnOpenPromptModal.addEventListener('click', () => {
+            const trial = trialsMap[activeTrialKey];
+            if (!trial) return;
+
+            modalSubtitle.textContent = `${trial.displayName} • ${trial.whiteBot} vs ${trial.blackBot}`;
+            const auditText = generateFullAuditText(trial);
+
+            modalAuditBody.innerHTML = `<pre class="bg-chessPanel border border-chessBorder rounded-xl p-4 text-gray-200 whitespace-pre-wrap leading-relaxed select-all">${auditText.replace(/</g, '&lt;')}</pre>`;
+            promptModal.classList.remove('hidden');
+            promptModal.classList.add('flex');
+        });
+
+        btnClosePromptModal.addEventListener('click', () => {
+            promptModal.classList.add('hidden');
+            promptModal.classList.remove('flex');
+        });
+
+        btnCopyFullAudit.addEventListener('click', () => {
+            const trial = trialsMap[activeTrialKey];
+            if (!trial) return;
+            copyTextToClipboard(generateFullAuditText(trial), btnCopyFullAudit, "Copy Full Audit Log");
+        });
+
+        btnDownloadAudit.addEventListener('click', () => {
+            const trial = trialsMap[activeTrialKey];
+            if (!trial) return;
+            const blob = new Blob([generateFullAuditText(trial)], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${trial.key}_prompt_audit.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+
+        // Keyboard shortcuts (Left/Right arrows, Spacebar)
+        window.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+            if (!activeTrialKey) return;
+            if (e.key === 'ArrowLeft') { e.preventDefault(); btnPrev.click(); }
+            else if (e.key === 'ArrowRight') { e.preventDefault(); btnNext.click(); }
+            else if (e.key === ' ') { e.preventDefault(); btnPlay.click(); }
+        });
+    </script>
+</body>
+</html>

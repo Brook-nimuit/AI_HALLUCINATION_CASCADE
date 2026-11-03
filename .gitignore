@@ -1,0 +1,28 @@
+# Local Python environments and generated files
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Local credentials and Vercel state
+.env
+.env.*
+!.env.example
+.vercel/
+
+# Local research data and generated trial artifacts
+/data/local/
+/local/
+
+# Editor state and OS metadata
+*.swp
+*.swo
+*.Zone.Identifier
+.DS_Store
+Thumbs.db
+*.log
+/node_modules/
+/web/assets/app.css
