@@ -1,5 +1,4 @@
 {
-  "installCommand": "npm ci --include=dev",
-  "buildCommand": "npm run build",
+  "buildCommand": "",
   "outputDirectory": "web"
 }
