@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Replay International Draughts model trial audits from Supabase Cloud."
+    />
+    <title>International Draughts Replay | The Hallucination Cascade</title>
+    <link rel="stylesheet" href="../assets/app.css" />
+    <link rel="stylesheet" href="./style.css?v=3" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header screen-only">
+        <a class="brand" href="/" aria-label="Back to The Hallucination Cascade">
+          <span class="brand-mark" aria-hidden="true">10</span>
+          <span>
+            <strong>The Hallucination Cascade</strong>
+            <small>State Tracking in Game-Playing Language Models</small>
+          </span>
+        </a>
+        <nav aria-label="Main navigation">
+          <a href="/#trials">← Back to All Games</a>
+          <a class="active" href="/checkers-replay/">Checkers Replay</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="intro">
+          <p class="eyebrow">Cloud Experiment Viewer / International Draughts</p>
+          <h1>Replay every move.</h1>
+          <p class="intro-copy">
+            Step through 10×10 International Draughts games synced from Supabase Cloud,
+            inspect the PDN record, and see rejected attempts highlighted on the board.
+          </p>
+          <p id="loadStatus" class="load-status screen-only" role="status" aria-live="polite">
+            Connecting to Supabase Cloud…
+          </p>
+        </section>
+
+        <section id="emptyState" class="empty-state" aria-labelledby="emptyTitle">
+          <div class="empty-icon" aria-hidden="true">♟</div>
+          <h2 id="emptyTitle">Loading Checkers Archive…</h2>
+          <p>
+            Fetching verified 10×10 International Draughts trials from Supabase Cloud.
+          </p>
+        </section>
+
+        <section id="viewer" class="viewer" hidden>
+          <div class="match-heading">
+            <div>
+              <p class="eyebrow">Selected match</p>
+              <h2 id="matchTitle"></h2>
+              <p id="matchSubtitle" class="muted"></p>
+            </div>
+            <div id="resultBadge" class="result-badge"></div>
+          </div>
+
+          <div class="workspace">
+            <section class="board-card" aria-label="Match replay">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">Board state</p>
+                  <h3 id="boardHeading">Starting position</h3>
+                </div>
+                <span id="plyCounter" class="ply-counter">Start</span>
+              </div>
+              <div class="board-frame">
+                <div id="board" class="board" role="grid" aria-label="International Draughts board"></div>
+                <svg id="moveOverlay" class="move-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+                <span id="illegalSticker" class="illegal-sticker" hidden>!!!!!!</span>
+              </div>
+              <div class="board-legend">
+                <span><i class="legend-piece white-piece" aria-hidden="true"></i> White</span>
+                <span><i class="legend-piece black-piece" aria-hidden="true"></i> Black</span>
+                <span><i class="legend-arrow" aria-hidden="true"></i> Attempted move</span>
+                <span><i class="legend-error" aria-hidden="true">!</i> Illegal move</span>
+              </div>
+              <div class="replay-controls screen-only">
+                <button id="firstButton" type="button" aria-label="Go to start" disabled>«</button>
+                <button id="previousButton" type="button" aria-label="Previous ply" disabled>‹</button>
+                <input id="turnSlider" type="range" min="0" max="0" value="0" aria-label="Selected ply" disabled />
+                <button id="nextButton" type="button" aria-label="Next ply" disabled>›</button>
+                <button id="lastButton" type="button" aria-label="Go to final ply" disabled>»</button>
+              </div>
+              <p id="turnSummary" class="turn-summary">Select a match to begin.</p>
+            </section>
+
+            <section class="details-card" aria-labelledby="moveHeading">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">Move record</p>
+                  <h3 id="moveHeading">Match details</h3>
+                </div>
+                <label class="select-label screen-only" for="matchSelect">Cloud Trial</label>
+              </div>
+              <select id="matchSelect" class="match-select screen-only" aria-label="Select match"></select>
+              <dl class="match-facts">
+                <div><dt>White</dt><dd id="whiteModel"></dd></div>
+                <div><dt>Black</dt><dd id="blackModel"></dd></div>
+                <div><dt>Plies logged</dt><dd id="moveCount"></dd></div>
+                <div><dt>Run ID</dt><dd id="runId"></dd></div>
+              </dl>
+              <div id="currentMove" class="current-move" aria-live="polite"></div>
+              <details class="pdn-details">
+                <summary>PDN game record</summary>
+                <pre id="pdnText"></pre>
+              </details>
+            </section>
+          </div>
+
+          <section class="log-card" aria-labelledby="logHeading">
+            <div class="card-heading">
+              <div>
+                <p class="eyebrow">Full match</p>
+                <h3 id="logHeading">Ply-by-ply log</h3>
+              </div>
+              <span id="logCount" class="muted"></span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Ply</th>
+                    <th scope="col">Player</th>
+                    <th scope="col">Model</th>
+                    <th scope="col">Move / response</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Reason</th>
+                  </tr>
+                </thead>
+                <tbody id="moveRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+    <script src="../assets/api/config.js"></script>
+    <script src="../assets/api/supabase-client.js"></script>
+    <script src="./app.js" defer></script>
+  </body>
+</html>

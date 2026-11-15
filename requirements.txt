@@ -2,3 +2,4 @@ google-genai
 matplotlib
 openai
 python-chess
+streamlit

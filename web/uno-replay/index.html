@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UNO Turn-by-Turn Replay Viewer | The Hallucination Cascade</title>
+  <link rel="stylesheet" href="../assets/app.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,400&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen bg-archival text-wood-espresso flex flex-col">
+  <!-- Header -->
+  <header class="bg-cream-bg border-b border-cream-border py-4 px-4 sm:px-6">
+    <div class="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <span class="font-mono text-[11px] uppercase tracking-wider text-wood-walnut font-semibold">Cloud Replay Archive</span>
+        <h1 class="font-serif text-2xl font-bold text-wood-espresso">UNO Turn-by-Turn Replay Viewer</h1>
+      </div>
+      <a href="/#trials" class="px-4 py-2 rounded-xl bg-wood-walnut hover:bg-wood-walnutHover text-cream-bg text-xs font-mono font-semibold transition-colors">
+        ← Back to All Games
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6 flex-grow">
+    <!-- Match Picker Bar -->
+    <div class="bg-cream-card border border-cream-border rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="space-y-0.5">
+        <label for="uno-trial-select" class="block text-[11px] font-mono uppercase text-wood-umber font-semibold">Select Verified UNO Trial</label>
+        <p id="uno-viewer-status" class="text-xs text-wood-umber">Loading UNO catalog from Supabase…</p>
+      </div>
+      <select id="uno-trial-select" class="px-3.5 py-2 rounded-xl bg-cream-bg border border-cream-border text-xs font-mono text-wood-espresso min-w-64">
+        <option value="">Loading trials…</option>
+      </select>
+    </div>
+
+    <!-- Reused Interactive UNO Stage -->
+    <div id="uno-overlay-stage"></div>
+  </main>
+
+  <script src="../assets/state.js"></script>
+  <script src="../assets/api/config.js"></script>
+  <script src="../assets/api/supabase-client.js"></script>
+  <script src="../assets/overlay-uno.js"></script>
+  <script>
+    (async function initStandaloneUnoViewer() {
+      const selectEl = document.getElementById("uno-trial-select");
+      const statusEl = document.getElementById("uno-viewer-status");
+      const params = new URLSearchParams(window.location.search);
+      const requestedId = params.get("trial_id");
+
+      try {
+        const allRows = await fetchAllCatalogTrials();
+        const unoTrials = [];
+        for (let i = 0; i < allRows.length; i++) {
+          if (String(allRows[i].game || "").toLowerCase() === "uno") {
+            unoTrials.push(allRows[i]);
+          }
+        }
+
+        statusEl.textContent = unoTrials.length + " UNO trials available in Supabase Cloud.";
+        let optionsHtml = "";
+        let activeId = unoTrials.length > 0 ? unoTrials[0].trial_id : "";
+
+        for (let i = 0; i < unoTrials.length; i++) {
+          const t = unoTrials[i];
+          if (requestedId && t.trial_id === requestedId) {
+            activeId = t.trial_id;
+          }
+          const parts = String(t.trial_id).split("__");
+          const shortTrial = parts.length >= 4 ? parts[3] : t.trial_id;
+          const tag = t.status === "completed" ? "Completed" : (t.status === "api_error" ? "Timeout" : "Illegal");
+          optionsHtml += `<option value="${escapeHTML(t.trial_id)}">${escapeHTML(t.white_model)} · ${escapeHTML(shortTrial)} (${t.plies_survived} turns · ${tag})</option>`;
+        }
+
+        selectEl.innerHTML = optionsHtml;
+        if (activeId) {
+          selectEl.value = activeId;
+          loadUnoReplayIntoOverlay(activeId);
+        }
+
+        selectEl.addEventListener("change", function () {
+          const nextId = selectEl.value;
+          if (!nextId) return;
+          history.replaceState(null, "", "?trial_id=" + encodeURIComponent(nextId));
+          loadUnoReplayIntoOverlay(nextId);
+        });
+      } catch (err) {
+        statusEl.textContent = "Error loading UNO trials: " + err.message;
+      }
+    })();
+  </script>
+</body>
+</html>

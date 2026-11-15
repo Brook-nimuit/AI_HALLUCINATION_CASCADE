@@ -1,0 +1,363 @@
+/* 1. Pagina-layout & Header */
+.page-shell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 4rem;
+  color: #1f1a14;
+}
+
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid rgba(60, 45, 30, 0.14);
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.brand-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #4a3520;
+  color: #fffaf2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: -0.03em;
+}
+
+.brand span strong {
+  display: block;
+  font-size: 1rem;
+}
+
+.brand span small {
+  display: block;
+  font-size: 0.78rem;
+  color: #6e5f4f;
+}
+
+.site-header nav {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.site-header nav a {
+  text-decoration: none;
+  color: #4a4036;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.site-header nav a.active,
+.site-header nav a:hover {
+  background: rgba(74, 53, 32, 0.1);
+  color: #1f1a14;
+}
+
+/* 2. Intro & Knoppenbalk */
+.intro {
+  text-align: center;
+  max-width: 680px;
+  margin: 0 auto 2rem;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #7c6853;
+  margin: 0 0 0.35rem;
+}
+
+.intro h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  margin: 0 0 0.75rem;
+  line-height: 1.1;
+}
+
+.intro-copy {
+  color: #5c4f42;
+  line-height: 1.6;
+  margin: 0 0 1.25rem;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+#auditFiles {
+  display: none;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1.15rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.button-primary {
+  background: #4a3520;
+  color: #fffaf2;
+}
+
+.button-primary:hover {
+  background: #382716;
+}
+
+.folder-hint,
+.load-status,
+.muted {
+  color: #6e5f4f;
+  font-size: 0.88rem;
+}
+
+/* 3. Lege status & Viewer Cards */
+.empty-state,
+.board-card,
+.details-card,
+.log-card {
+  background: rgba(255, 252, 245, 0.9);
+  border: 1px solid rgba(60, 45, 30, 0.14);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 16px rgba(40, 30, 20, 0.04);
+}
+
+.empty-state {
+  text-align: center;
+  max-width: 640px;
+  margin: 1.5rem auto;
+  padding: 2.5rem 1.5rem;
+}
+
+.empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(74, 53, 32, 0.08);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.match-heading,
+.card-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 860px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+.result-badge,
+.ply-counter {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(74, 53, 32, 0.1);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* 4. UNO Speeltafel & Kaarten */
+.uno-table {
+  background: #f6f1e7;
+  border: 1px solid rgba(60, 45, 30, 0.14);
+  border-radius: 14px;
+  padding: 1.25rem;
+  margin: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.uno-center-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px dashed rgba(60, 45, 30, 0.18);
+}
+
+.uno-pile-box,
+.uno-hand-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.uno-box-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6e5f4f;
+  font-weight: 600;
+}
+
+.uno-hand-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 96px;
+}
+
+.uno-card {
+  width: 72px;
+  height: 104px;
+  border-radius: 10px;
+  border: 3px solid #ffffff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.16);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 0.35rem;
+  text-align: center;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.uno-card-color {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.uno-card-value {
+  font-size: 1rem;
+  line-height: 1.15;
+  margin-top: 0.15rem;
+}
+
+.uno-red { background: #d93829; }
+.uno-yellow { background: #d99b16; }
+.uno-green { background: #2b8a3e; }
+.uno-blue { background: #1c64d9; }
+.uno-neutral { background: #4a4036; }
+
+.uno-card-played {
+  outline: 3px solid #1f1a14;
+  transform: translateY(-4px);
+}
+
+.uno-card-illegal {
+  outline: 3px solid #d93829;
+  background: #7a1c14;
+}
+
+/* 5. Replay Knoppen, Details & Log Tabel */
+.replay-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.replay-controls button {
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(60, 45, 30, 0.2);
+  background: #fff;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.replay-controls input[type="range"] {
+  flex: 1;
+}
+
+.match-select {
+  width: 100%;
+  padding: 0.55rem;
+  border-radius: 8px;
+  border: 1px solid rgba(60, 45, 30, 0.22);
+  margin-bottom: 1rem;
+}
+
+.match-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+}
+
+.match-facts dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #6e5f4f;
+}
+
+.match-facts dd {
+  margin: 0.15rem 0 0;
+  font-weight: 600;
+}
+
+.prompt-preview {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(60, 45, 30, 0.06);
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th, td {
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid rgba(60, 45, 30, 0.12);
+}

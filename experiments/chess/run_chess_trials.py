@@ -1,47 +1,49 @@
-"""Run chess state-tracking trials against OpenAI-compatible chat models."""
+"""Run chess state-tracking trials and log directly to Supabase Cloud."""
 
 import argparse
-import csv
-import json
+from datetime import datetime
 import os
+from pathlib import Path
 import random
 import re
+import sys
 import time
-from datetime import datetime
-from pathlib import Path
+from typing import Any
 
 import chess
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+import chess.pgn
 from openai import APIError, OpenAI, RateLimitError
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "data" / "local"
+sys.path.insert(0, str(PROJECT_ROOT / "experiments"))
+from cloud_logger import (
+    classify_chess_outcome,
+    log_trial_to_supabase,
+    slim_chess_audit,
+)
+
 CONFIG_PARAMS = {
     "temperature": 0.7,
     "max_tokens_standard": 150,
-    "max_completion_tokens_astra": 2500,
+    "max_completion_tokens_reasoning": 2500,
 }
-SYSTEM_PROMPT = """You are an engine playing headless chess.
-You will receive the chronological move history in standard algebraic notation (SAN).
-Determine the board state and output ONLY your next move in valid standard algebraic notation.
-Do not write explanations, commentary, sentences, punctuation, or move numbers.
-Output exactly ONE move token (e.g. e4, Nf3, Bxc6, O-O, Qh4#)."""
+REASONING_COMPLETION_TOKEN_BUDGETS = (2500, 5000)
+ANTHROPIC_COMPLETION_TOKEN_BUDGET = 8192
+
+SYSTEM_PROMPT = """You are playing standard chess. The game starts from the standard
+initial position. Maintain the game state across this conversation: your prior
+move replies are your moves, and each new user message gives the opponent's
+latest move in standard algebraic notation (SAN). PRINT OUT BOARD replies only
+request the current board and do not advance the game. Apply legal chess rules
+and choose one legal move for the side to move, or reply exactly PRINT OUT BOARD
+to request the current board. For a move, reply with exactly one SAN move token
+(for example e4, Nf3, Bxc6, O-O, or Qh4#), with no move number, explanation,
+commentary, or other text."""
+
+PRINT_BOARD_RESPONSE = "PRINT OUT BOARD"
 PIECE_SYMBOLS = {
-    "P": "♙",
-    "N": "♘",
-    "B": "♗",
-    "R": "♖",
-    "Q": "♕",
-    "K": "♔",
-    "p": "♟",
-    "n": "♞",
-    "b": "♝",
-    "r": "♜",
-    "q": "♛",
-    "k": "♚",
+    "P": "♙", "N": "♘", "B": "♗", "R": "♖", "Q": "♕", "K": "♔",
+    "p": "♟", "n": "♞", "b": "♝", "r": "♜", "q": "♛", "k": "♚",
 }
 
 
@@ -59,8 +61,21 @@ def clean_api_key(value: str | None) -> str | None:
     )
 
 
+def clean_model_name(model_name: str) -> str:
+    for prefix in ("ollama/", "local/"):
+        if model_name.lower().startswith(prefix):
+            return model_name[len(prefix) :]
+    return model_name
+
+
 def provider_for_model(model_name: str) -> str:
     lowered = model_name.lower()
+    if lowered.startswith("ollama/") or lowered.startswith("local/") or "deepseek" in lowered:
+        return "ollama"
+    if "claude" in lowered:
+        return "anthropic"
+    if "gpt-oss" in lowered:
+        return "groq"
     if lowered.startswith("gpt-") or "astra" in lowered:
         return "openai"
     return "groq"
@@ -70,6 +85,7 @@ def create_clients(
     model_names: list[str],
     openai_api_key: str | None = None,
     groq_api_key: str | None = None,
+    anthropic_api_key: str | None = None,
 ) -> dict[str, OpenAI]:
     required_providers = {
         provider_for_model(name)
@@ -79,17 +95,27 @@ def create_clients(
     keys = {
         "openai": clean_api_key(openai_api_key or os.getenv("OPENAI_API_KEY")),
         "groq": clean_api_key(groq_api_key or os.getenv("GROQ_API_KEY")),
+        "anthropic": clean_api_key(anthropic_api_key or os.getenv("ANTHROPIC_API_KEY")),
     }
     clients: dict[str, OpenAI] = {}
     for provider in required_providers:
+        if provider == "ollama":
+            clients["ollama"] = OpenAI(
+                base_url="http://localhost:11434/v1",
+                api_key="ollama",
+            )
+            continue
         if not keys[provider]:
             env_name = f"{provider.upper()}_API_KEY"
-            raise ValueError(
-                f"Set {env_name} or pass the corresponding --{provider}-api-key option."
-            )
+            raise ValueError(f"Set {env_name} or pass --{provider}-api-key.")
         if provider == "groq":
             clients[provider] = OpenAI(
                 base_url="https://api.groq.com/openai/v1",
+                api_key=keys[provider],
+            )
+        elif provider == "anthropic":
+            clients[provider] = OpenAI(
+                base_url="https://api.anthropic.com/v1/",
                 api_key=keys[provider],
             )
         else:
@@ -97,108 +123,10 @@ def create_clients(
     return clients
 
 
-def get_match_folder(
-    model_name: str, trial_id: int, output_dir: Path, run_id: str
-) -> Path:
-    safe_model = re.sub(r"[^a-zA-Z0-9_-]", "_", model_name)
-    folder = output_dir / "replays" / f"{safe_model}_{run_id}_trial_{trial_id:02d}"
-    folder.mkdir(parents=True, exist_ok=True)
-    return folder
-
-
-def _draw_board(
-    ax: plt.Axes,
-    board: chess.Board,
-    highlight: chess.Square | None = None,
-    move_squares: tuple[chess.Square | None, chess.Square | None] = (None, None),
-) -> None:
-    light_square, dark_square = "#f0d9b5", "#b58863"
-    from_square, to_square = move_squares
-    for row in range(8):
-        for column in range(8):
-            square = chess.square(column, 7 - row)
-            color = light_square if (row + column) % 2 == 0 else dark_square
-            if square == highlight:
-                color = "#f4a261"
-            elif square == to_square:
-                color = "#e63946"
-            elif square == from_square:
-                color = "#e9c46a"
-            ax.add_patch(
-                plt.Rectangle(
-                    (column, 7 - row), 1, 1, facecolor=color, edgecolor="none"
-                )
-            )
-            if column == 0:
-                ax.text(
-                    -0.35,
-                    7 - row + 0.5,
-                    str(8 - row),
-                    va="center",
-                    ha="center",
-                    fontsize=10,
-                    fontweight="bold",
-                    color="#aaaaaa",
-                )
-            if row == 7:
-                ax.text(
-                    column + 0.5,
-                    -0.35,
-                    chr(ord("a") + column),
-                    va="center",
-                    ha="center",
-                    fontsize=10,
-                    fontweight="bold",
-                    color="#aaaaaa",
-                )
-            piece = board.piece_at(square)
-            if piece:
-                ax.text(
-                    column + 0.5,
-                    7 - row + 0.45,
-                    PIECE_SYMBOLS[piece.symbol()],
-                    fontfamily="DejaVu Sans",
-                    va="center",
-                    ha="center",
-                    fontsize=28,
-                    color="#ffffff" if piece.color == chess.WHITE else "#111111",
-                    fontweight="bold",
-                )
-    ax.set_xlim(-0.7, 8.5)
-    ax.set_ylim(-0.7, 8.5)
-    ax.set_aspect("equal")
-    ax.axis("off")
-
-
-def save_board_snapshot(
-    board: chess.Board,
-    folder: Path,
-    plies: int,
-    actor: str,
-    bot_name: str,
-    last_move_str: str = "",
-) -> Path:
-    safe_move = re.sub(r"[^a-zA-Z0-9_+#=-]", "", last_move_str)
-    suffix = f"_{safe_move}" if safe_move else ""
-    save_path = folder / f"ply_{plies:02d}_{actor.lower()}{suffix}.png"
-
-    fig, ax = plt.subplots(figsize=(6, 6), facecolor="#1e1e1e")
-    ax.set_facecolor("#1e1e1e")
-    _draw_board(ax, board)
-    title = f"Ply {plies:02d} ({actor}) | {bot_name}"
-    if last_move_str:
-        title += f" - Move: {last_move_str}"
-    ax.set_title(title, fontsize=11, fontweight="bold", color="#ffffff", pad=12)
-    plt.tight_layout()
-    fig.savefig(save_path, dpi=140, facecolor=fig.get_facecolor(), bbox_inches="tight")
-    plt.close(fig)
-    return save_path
-
-
-def simulate_illegal_board(
+def diagnose_illegal_move(
     board: chess.Board, attempted_san: str
-) -> tuple[chess.Board, chess.Square | None, chess.Square | None, str]:
-    after_board = board.copy(stack=False)
+) -> tuple[str, str | None, str | None]:
+    """Infers the intended squares and failure archetype without Matplotlib."""
     turn_color = board.turn
     color_name = "White" if turn_color == chess.WHITE else "Black"
     clean = attempted_san.replace("+", "").replace("#", "").strip()
@@ -206,22 +134,18 @@ def simulate_illegal_board(
     rank = 0 if turn_color == chess.WHITE else 7
 
     if clean in {"O-O", "0-0", "O-O-O", "0-0-0"}:
-        king_to_file, rook_from_file, rook_to_file = (
-            (6, 7, 5) if clean in {"O-O", "0-0"} else (2, 0, 3)
-        )
+        king_to_file = 6 if clean in {"O-O", "0-0"} else 2
         king_to = chess.square(king_to_file, rank)
-        rook_from = chess.square(rook_from_file, rank)
-        rook_to = chess.square(rook_to_file, rank)
-        after_board.remove_piece_at(king_home)
-        after_board.remove_piece_at(rook_from)
-        after_board.set_piece_at(king_to, chess.Piece(chess.KING, turn_color))
-        after_board.set_piece_at(rook_to, chess.Piece(chess.ROOK, turn_color))
         castle = "O-O" if king_to_file == 6 else "O-O-O"
-        return after_board, king_home, king_to, f"Illegal {color_name} Castling ({castle})"
+        return (
+            f"Illegal {color_name} Castling ({castle})",
+            chess.square_name(king_home),
+            chess.square_name(king_to),
+        )
 
     destination_match = re.search(r"([a-h][1-8])", clean)
     if not destination_match:
-        return after_board, None, None, f"Unparseable Token: '{attempted_san}'"
+        return f"Unparseable Token: '{attempted_san}'", None, None
 
     to_square = chess.parse_square(destination_match.group(1))
     piece_types = {
@@ -239,11 +163,11 @@ def simulate_illegal_board(
     if piece_type == chess.PAWN and clean[0] in "abcdefgh":
         origin_file = ord(clean[0]) - ord("a")
         same_file = [
-            square for square in candidates if chess.square_file(square) == origin_file
+            sq for sq in candidates if chess.square_file(sq) == origin_file
         ]
         if same_file:
             from_square = min(
-                same_file, key=lambda square: chess.square_distance(square, to_square)
+                same_file, key=lambda sq: chess.square_distance(sq, to_square)
             )
     elif candidates:
         prefix = clean[: destination_match.start()].replace("x", "")
@@ -252,25 +176,19 @@ def simulate_illegal_board(
         if len(prefix) == 1 and prefix in "abcdefgh":
             file_index = ord(prefix) - ord("a")
             candidates = [
-                square
-                for square in candidates
-                if chess.square_file(square) == file_index
+                sq for sq in candidates if chess.square_file(sq) == file_index
             ] or candidates
         elif len(prefix) == 1 and prefix in "12345678":
             rank_index = int(prefix) - 1
             candidates = [
-                square
-                for square in candidates
-                if chess.square_rank(square) == rank_index
+                sq for sq in candidates if chess.square_rank(sq) == rank_index
             ] or candidates
         from_square = min(
-            candidates, key=lambda square: chess.square_distance(square, to_square)
+            candidates, key=lambda sq: chess.square_distance(sq, to_square)
         )
 
     occupant = board.piece_at(to_square)
     if from_square is not None and from_square != to_square:
-        after_board.remove_piece_at(from_square)
-        after_board.set_piece_at(to_square, chess.Piece(piece_type, turn_color))
         if occupant:
             description = (
                 f"Forced {piece_symbol}: {chess.square_name(from_square)} → "
@@ -287,57 +205,13 @@ def simulate_illegal_board(
             f"{chess.square_name(to_square)}"
         )
     else:
-        after_board.set_piece_at(to_square, chess.Piece(piece_type, turn_color))
         description = f"Phantom Spawn: Created {piece_symbol} on {chess.square_name(to_square)}"
-    return after_board, from_square, to_square, description
 
-
-def save_before_after_snapshot(
-    board: chess.Board,
-    attempted_san: str,
-    folder: Path,
-    trial_id: int,
-    plies: int,
-    model_name: str,
-) -> tuple[Path, str]:
-    safe_move = re.sub(r"[^a-zA-Z0-9_+-]", "", attempted_san) or "illegal"
-    save_path = folder / f"ply_{plies:02d}_FAIL_{safe_move}.png"
-    after_board, from_square, to_square, description = simulate_illegal_board(
-        board, attempted_san
+    return (
+        description,
+        chess.square_name(from_square) if from_square is not None else None,
+        chess.square_name(to_square),
     )
-    fig, (before_ax, after_ax) = plt.subplots(
-        1, 2, figsize=(11.5, 5.8), facecolor="#1e1e1e"
-    )
-    for ax in (before_ax, after_ax):
-        ax.set_facecolor("#1e1e1e")
-    _draw_board(before_ax, board, highlight=to_square)
-    _draw_board(after_ax, after_board, move_squares=(from_square, to_square))
-    before_ax.set_title(
-        f"BEFORE (Valid State at Ply {plies})\n"
-        f"{'White' if board.turn == chess.WHITE else 'Black'} ({model_name}) to Move",
-        fontsize=12,
-        fontweight="bold",
-        color="#ffffff",
-        pad=12,
-    )
-    after_ax.set_title(
-        f"AFTER (Forced Illegal Move: '{attempted_san}')\n{description}",
-        fontsize=12,
-        fontweight="bold",
-        color="#ff6b6b",
-        pad=12,
-    )
-    fig.suptitle(
-        f"Trial {trial_id:02d} Spatial Drift Snapshot | White: {model_name}",
-        fontsize=14,
-        fontweight="bold",
-        color="#e0e0e0",
-        y=0.98,
-    )
-    plt.tight_layout()
-    fig.savefig(save_path, dpi=160, facecolor=fig.get_facecolor(), bbox_inches="tight")
-    plt.close(fig)
-    return save_path, description
 
 
 def extract_move(raw_text: str, board: chess.Board) -> str:
@@ -364,81 +238,123 @@ def extract_move(raw_text: str, board: chess.Board) -> str:
     return tokens[-1] if tokens else ""
 
 
+def is_print_board_response(raw_response: str) -> bool:
+    return raw_response.strip().casefold() == PRINT_BOARD_RESPONSE.casefold()
+
+
+def board_text(board: chess.Board) -> str:
+    rows = []
+    for rank in range(7, -1, -1):
+        pieces = []
+        for file_index in range(8):
+            piece = board.piece_at(chess.square(file_index, rank))
+            pieces.append(PIECE_SYMBOLS[piece.symbol()] if piece else ".")
+        rows.append(f"{rank + 1} {' '.join(pieces)}")
+    rows.append("  a b c d e f g h")
+    return "\n".join(rows)
+
+
 def query_model(
-    transcript: str,
+    user_prompt: str,
     model_name: str,
     board: chess.Board,
     clients: dict[str, OpenAI],
-) -> tuple[str, str, dict[str, str | int | float]]:
-    side = "White" if board.turn == chess.WHITE else "Black"
-    user_prompt = (
-        f"Move history:\n{transcript}\n\nYou play {side}. Your move:"
-        if transcript
-        else "The board is in the starting position. You play White. Your move:"
-    )
+    conversation: list[dict[str, str]] | None = None,
+) -> tuple[str, str, dict[str, Any]]:
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
+        *(conversation or []),
         {"role": "user", "content": user_prompt},
     ]
-    is_astra = "astra" in model_name.lower()
+    lowered_model_name = model_name.lower()
+    uses_completion_tokens = (
+        "astra" in lowered_model_name
+        or re.match(r"^gpt-6(?:[.-]|$)", lowered_model_name) is not None
+    )
     provider = provider_for_model(model_name)
     client = clients[provider]
-    metadata: dict[str, str | int | float] = {
-        "model_name": model_name,
-        "temperature": (
-            "model default" if is_astra else CONFIG_PARAMS["temperature"]
-        ),
-        "max_tokens": (
-            CONFIG_PARAMS["max_completion_tokens_astra"]
-            if is_astra
-            else CONFIG_PARAMS["max_tokens_standard"]
-        ),
-    }
+    metadata: dict[str, Any] = {"model_name": model_name, "provider": provider}
 
+    budget_attempt = 0
     for _ in range(6):
         try:
             request_options = (
-                {"max_completion_tokens": CONFIG_PARAMS["max_completion_tokens_astra"]}
-                if is_astra
-                else {
-                    "temperature": CONFIG_PARAMS["temperature"],
-                    "max_tokens": CONFIG_PARAMS["max_tokens_standard"],
+                {
+                    "max_completion_tokens": REASONING_COMPLETION_TOKEN_BUDGETS[budget_attempt],
+                    "reasoning_effort": "low",
                 }
+                if uses_completion_tokens
+                else (
+                    {"max_tokens": ANTHROPIC_COMPLETION_TOKEN_BUDGET}
+                    if provider == "anthropic"
+                    else {
+                        "temperature": CONFIG_PARAMS["temperature"],
+                        "max_tokens": CONFIG_PARAMS["max_tokens_standard"],
+                    }
+                )
             )
             response = client.chat.completions.create(
-                model=model_name,
+                model=clean_model_name(model_name),
                 messages=messages,
                 **request_options,
             )
-            message = response.choices[0].message
+            choice = response.choices[0]
+            if uses_completion_tokens and getattr(choice, "finish_reason", None) == "length":
+                if budget_attempt < len(REASONING_COMPLETION_TOKEN_BUDGETS) - 1:
+                    budget_attempt += 1
+                    continue
+                metadata["error"] = "Model response was truncated."
+                return f"API_ERROR: {metadata['error']}", user_prompt, metadata
+
+            if provider == "anthropic" and getattr(choice, "finish_reason", None) in {"length", "max_tokens"}:
+                metadata["error"] = "Claude response was truncated."
+                return f"API_ERROR: {metadata['error']}", user_prompt, metadata
+
+            message = choice.message
             content = message.content or getattr(message, "reasoning", "") or ""
-            return extract_move(content, board), user_prompt, metadata
+            metadata["raw_response"] = content
+            move = (
+                PRINT_BOARD_RESPONSE
+                if is_print_board_response(content)
+                else extract_move(content, board)
+            )
+            if conversation is not None:
+                conversation.extend(
+                    [
+                        {"role": "user", "content": user_prompt},
+                        {"role": "assistant", "content": move},
+                    ]
+                )
+            return move, user_prompt, metadata
         except RateLimitError as error:
             wait_match = re.search(r"try again in (\d+(?:\.\d+)?)s", str(error))
             wait_seconds = float(wait_match.group(1)) + 2 if wait_match else 12
             print(f"Rate limit: waiting {wait_seconds:.1f}s before retry.")
             time.sleep(wait_seconds)
         except APIError as error:
+            metadata["error"] = str(error)
             return f"API_ERROR: {error}", user_prompt, metadata
     return "API_ERROR: Maximum rate-limit retries exceeded.", user_prompt, metadata
 
 
-def format_transcript(board: chess.Board) -> str:
-    replay_board = chess.Board()
-    transcript_parts: list[str] = []
-    for index, move in enumerate(board.move_stack):
-        san = replay_board.san(move)
-        replay_board.push(move)
-        if index % 2 == 0:
-            transcript_parts.append(f"{index // 2 + 1}. {san}")
-        else:
-            transcript_parts[-1] += f" {san}"
-    return " ".join(transcript_parts)
+def build_pgn_string(audit_data: dict[str, Any], board: chess.Board) -> str:
+    pgn_game = chess.pgn.Game.from_board(board)
+    pgn_game.headers["Event"] = "Weird Index State-Tracking Trial"
+    pgn_game.headers["White"] = audit_data["white_bot"]
+    pgn_game.headers["Black"] = audit_data["black_bot"]
+    pgn_game.headers["Result"] = board.result() if board.is_game_over() else "*"
 
-
-def write_audit(folder: Path, audit_data: dict) -> None:
-    with (folder / "match_audit.json").open("w", encoding="utf-8") as audit_file:
-        json.dump(audit_data, audit_file, indent=2)
+    illegal_move = next(
+        (move for move in reversed(audit_data["moves"]) if move["status"] == "ILLEGAL"),
+        None,
+    )
+    if illegal_move:
+        pgn_game.end().comment = (
+            f"Illegal move attempted by {illegal_move['actor']}: {illegal_move['san']}"
+        )
+    return pgn_game.accept(
+        chess.pgn.StringExporter(headers=True, variations=False, comments=True)
+    )
 
 
 def run_trial(
@@ -447,18 +363,18 @@ def run_trial(
     black_model: str,
     max_plies: int,
     clients: dict[str, OpenAI],
-    output_dir: Path,
     run_id: str,
-) -> dict[str, str | int]:
+) -> dict[str, Any]:
     if black_model == "self":
         black_model = white_model
 
     board = chess.Board()
     plies_survived = 0
-    folder = get_match_folder(white_model, trial_id, output_dir, run_id)
+    board_print_requests = 0
     white_label = f"{white_model} (White)" if white_model == black_model else white_model
     black_label = f"{black_model} (Black)" if white_model == black_model else black_model
-    audit_data = {
+
+    audit_data: dict[str, Any] = {
         "trial_id": trial_id,
         "white_bot": white_label,
         "black_bot": black_label,
@@ -466,10 +382,64 @@ def run_trial(
         "failed": False,
         "failure_reason": "",
         "plies_survived": 0,
+        "board_print_requests": 0,
         "moves": [],
         "prompts": [],
+        "started_at": datetime.now().astimezone().isoformat(),
+        "max_plies": max_plies,
     }
-    save_board_snapshot(board, folder, 0, "Start", "Initial")
+    conversations: dict[str, list[dict[str, str]]] = {"White": [], "Black": []}
+
+    def finalize_and_upload(failed_flag: bool, reason_text: str, raw_resp: str, culprit: str) -> dict[str, Any]:
+        audit_data["plies_survived"] = plies_survived
+        audit_data["board_print_requests"] = board_print_requests
+        audit_data["failed"] = failed_flag
+        audit_data["failure_reason"] = reason_text
+        audit_data["completed_at"] = datetime.now().astimezone().isoformat()
+        audit_data["pgn"] = build_pgn_string(audit_data, board)
+
+        slimmed = slim_chess_audit(audit_data)
+        status, clean_reason = classify_chess_outcome(
+            failed=failed_flag,
+            failure_reason=reason_text,
+            raw_response=raw_resp,
+            culprit_label=culprit,
+        )
+
+        last_move = slimmed["moves"][-1] if slimmed["moves"] else {}
+        exact_prompt = SYSTEM_PROMPT
+        if last_move.get("prompt"):
+            exact_prompt = (
+                f"System:\n{SYSTEM_PROMPT}\n\n"
+                f"User (Ply {last_move.get('ply')}):\n{last_move.get('prompt')}"
+            )
+
+        cloud_trial_id = (
+            f"chess__{white_model}__{run_id}__Trial_{trial_id:03d}"
+            .replace(" ", "_")
+            .replace("/", "-")
+        )
+
+        log_trial_to_supabase(
+            game="chess",
+            white_model=white_model,
+            black_model=black_model,
+            status=status,
+            plies_survived=plies_survived,
+            failure_reason=clean_reason,
+            board_print_requests=board_print_requests,
+            exact_prompt=exact_prompt,
+            trial_id=cloud_trial_id,
+            replay_data=slimmed,
+        )
+
+        return {
+            "trial_id": cloud_trial_id,
+            "status": status,
+            "plies_survived": plies_survived,
+            "board_print_requests": board_print_requests,
+            "failure_reason": clean_reason,
+        }
 
     while not board.is_game_over() and plies_survived < max_plies:
         is_white = board.turn == chess.WHITE
@@ -480,217 +450,122 @@ def run_trial(
         if not is_white and black_model.lower() == "random":
             random_move = random.choice(list(board.legal_moves))
             san = board.san(random_move)
+            pre_fen = board.fen()
             board.push(random_move)
             plies_survived += 1
-            save_board_snapshot(board, folder, plies_survived, side_name, active_label, san)
             audit_data["moves"].append(
                 {
                     "ply": plies_survived,
                     "actor": side_name,
                     "bot": active_label,
                     "san": san,
+                    "raw_response": san,
                     "status": "LEGAL",
+                    "pre_fen": pre_fen,
+                    "post_fen": board.fen(),
+                    "prompt": "Random baseline move",
                 }
             )
             continue
 
-        user_prompt = ""
-        transcript = format_transcript(board)
-        move_text, user_prompt, metadata = query_model(
-            transcript, active_model, board, clients
-        )
-        if move_text.startswith("API_ERROR"):
-            audit_data.update(
-                failed=True,
-                failure_reason=move_text,
-                plies_survived=plies_survived,
+        if audit_data["moves"]:
+            previous_move = audit_data["moves"][-1]["san"]
+            user_prompt = f"Opponent played: {previous_move}. You play {side_name}. Your move:"
+        else:
+            user_prompt = "Game start. You are White; the standard starting position is in effect. Your move:"
+
+        while True:
+            move_text, user_prompt, metadata = query_model(
+                user_prompt,
+                active_model,
+                board,
+                clients,
+                conversations[side_name],
             )
-            audit_data["prompts"].append(
+            if not is_print_board_response(move_text):
+                break
+            board_print_requests += 1
+            user_prompt = (
+                f"Current board:\n{board_text(board)}\n"
+                f"It is still {side_name}'s turn. Choose a legal move, or reply "
+                f"exactly {PRINT_BOARD_RESPONSE} to display the board again."
+            )
+
+        if move_text.startswith("API_ERROR"):
+            audit_data["moves"].append(
                 {
                     "ply": plies_survived + 1,
                     "actor": side_name,
                     "bot": active_label,
-                    "user_prompt": user_prompt,
-                    "extracted_move": move_text,
+                    "san": "",
+                    "raw_response": move_text,
                     "status": "API_ERROR",
-                    "metadata": metadata,
+                    "pre_fen": board.fen(),
+                    "post_fen": board.fen(),
+                    "reason": move_text,
+                    "prompt": user_prompt,
                 }
             )
-            write_audit(folder, audit_data)
-            return {
-                "trial_id": trial_id,
-                "model": f"{white_label} vs {black_label}",
-                "plies_survived": plies_survived,
-                "failed": 1,
-                "failure_reason": move_text,
-                "raw_response": move_text,
-            }
+            return finalize_and_upload(True, move_text, move_text, f"{side_name} / {active_model}")
 
         san = move_text.replace("0-0-0", "O-O-O").replace("0-0", "O-O")
         try:
             move = board.parse_san(san)
         except ValueError as error:
-            image_path, description = save_before_after_snapshot(
-                board, move_text, folder, trial_id, plies_survived + 1, active_label
-            )
-            reason = (
-                f"[{side_name} / {active_label}] Illegal Move: '{move_text}' — "
-                f"{description} ({error})"
-            )
-            audit_data.update(
-                failed=True,
-                failure_reason=reason,
-                plies_survived=plies_survived,
-            )
+            pre_fen = board.fen()
+            description, from_square, to_square = diagnose_illegal_move(board, move_text)
+            reason = f"[{side_name} / {active_model}] Illegal Move: '{move_text}' — {description} ({error})"
             audit_data["moves"].append(
                 {
                     "ply": plies_survived + 1,
                     "actor": side_name,
                     "bot": active_label,
                     "san": move_text,
+                    "raw_response": str(metadata.get("raw_response", move_text)),
                     "status": "ILLEGAL",
                     "reason": reason,
+                    "pre_fen": pre_fen,
+                    "post_fen": pre_fen,
+                    "prompt": user_prompt,
+                    "illegal_move": {
+                        "san": move_text,
+                        "from_square": from_square,
+                        "to_square": to_square,
+                    },
                 }
             )
-            audit_data["prompts"].append(
-                {
-                    "ply": plies_survived + 1,
-                    "actor": side_name,
-                    "bot": active_label,
-                    "user_prompt": user_prompt,
-                    "extracted_move": move_text,
-                    "status": "ILLEGAL",
-                    "metadata": metadata,
-                }
-            )
-            write_audit(folder, audit_data)
-            return {
-                "trial_id": trial_id,
-                "model": f"{white_label} vs {black_label}",
-                "plies_survived": plies_survived,
-                "failed": 1,
-                "failure_reason": f"{reason} [Snapshot: {image_path}]",
-                "raw_response": move_text,
-            }
+            return finalize_and_upload(True, reason, move_text, f"{side_name} / {active_model}")
 
+        pre_fen = board.fen()
         board.push(move)
         plies_survived += 1
-        save_board_snapshot(board, folder, plies_survived, side_name, active_label, san)
         audit_data["moves"].append(
             {
                 "ply": plies_survived,
                 "actor": side_name,
                 "bot": active_label,
                 "san": san,
+                "raw_response": str(metadata.get("raw_response", move_text)),
                 "status": "LEGAL",
-            }
-        )
-        audit_data["prompts"].append(
-            {
-                "ply": plies_survived,
-                "actor": side_name,
-                "bot": active_label,
-                "user_prompt": user_prompt,
-                "extracted_move": san,
-                "status": "LEGAL",
-                "metadata": metadata,
+                "pre_fen": pre_fen,
+                "post_fen": board.fen(),
+                "prompt": user_prompt,
             }
         )
 
-    audit_data["plies_survived"] = plies_survived
-    audit_data["failure_reason"] = (
-        f"Completed ({board.result() if board.is_game_over() else 'Max Plies Reached'})"
-    )
-    write_audit(folder, audit_data)
-    return {
-        "trial_id": trial_id,
-        "model": f"{white_label} vs {black_label}",
-        "plies_survived": plies_survived,
-        "failed": 0,
-        "failure_reason": audit_data["failure_reason"],
-        "raw_response": "",
-    }
-
-
-def execute_batch(
-    white_model: str,
-    black_model: str,
-    num_trials: int,
-    max_plies: int,
-    output_dir: Path,
-    csv_path: Path,
-    clients: dict[str, OpenAI],
-    run_id: str,
-    append: bool = False,
-) -> None:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    csv_path.parent.mkdir(parents=True, exist_ok=True)
-    if csv_path.exists() and not append:
-        raise FileExistsError(f"{csv_path} already exists; use --append to add rows.")
-
-    black_label = white_model if black_model == "self" else black_model
-    print(f"Starting {num_trials} trials | {white_model} (White) vs {black_label} (Black)")
-    print(f"Results: {csv_path}")
-    print(f"Replay data: {output_dir / 'replays'}")
-
-    fieldnames = [
-        "trial_id",
-        "model",
-        "plies_survived",
-        "failed",
-        "failure_reason",
-        "raw_response",
-    ]
-    file_exists = csv_path.exists() and csv_path.stat().st_size > 0
-    mode = "a" if append else "x"
-    with csv_path.open(mode, newline="", encoding="utf-8") as results_file:
-        writer = csv.DictWriter(results_file, fieldnames=fieldnames)
-        if not file_exists:
-            writer.writeheader()
-        for trial_id in range(1, num_trials + 1):
-            result = run_trial(
-                trial_id,
-                white_model,
-                black_model,
-                max_plies,
-                clients,
-                output_dir,
-                run_id,
-            )
-            writer.writerow(result)
-            results_file.flush()
-            status = "FAILED" if result["failed"] else "SURVIVED"
-            print(
-                f"Trial {trial_id:02d}/{num_trials:02d} | "
-                f"Plies: {result['plies_survived']} | {status} | "
-                f"{result['failure_reason']}"
-            )
+    done_reason = f"Completed ({board.result() if board.is_game_over() else 'Max Plies Reached'})"
+    return finalize_and_upload(False, done_reason, "", "")
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--white-model", required=True, help="Model to test as White.")
-    parser.add_argument(
-        "--black-model",
-        default="self",
-        help="Black model, 'self' for self-play, or 'random' for a legal random baseline.",
-    )
-    parser.add_argument("--trials", type=int, default=1, help="Number of trials to run.")
+    parser.add_argument("--black-model", default="self", help="Black model, 'self', or 'random'.")
+    parser.add_argument("--trials", type=int, default=1)
     parser.add_argument("--max-plies", type=int, default=80)
-    parser.add_argument(
-        "--output-dir",
-        type=Path,
-        default=DEFAULT_OUTPUT_DIR,
-        help="Directory for generated replays and results.",
-    )
-    parser.add_argument(
-        "--output-csv",
-        type=Path,
-        help="CSV destination. Defaults to a timestamped file under data/local/results/.",
-    )
-    parser.add_argument("--append", action="store_true", help="Append rows to an existing CSV.")
-    parser.add_argument("--openai-api-key", help="OpenAI key (OPENAI_API_KEY is preferred).")
-    parser.add_argument("--groq-api-key", help="Groq key (GROQ_API_KEY is preferred).")
+    parser.add_argument("--openai-api-key")
+    parser.add_argument("--groq-api-key")
+    parser.add_argument("--anthropic-api-key")
     return parser
 
 
@@ -704,34 +579,29 @@ def main() -> None:
     if args.white_model.lower() == "random":
         parser.error("The White player must be an API-backed model.")
 
-    black_model = args.black_model
     run_id = datetime.now().astimezone().strftime("%Y%m%dT%H%M%S")
-    safe_model = re.sub(r"[^a-zA-Z0-9_-]", "_", args.white_model)
-    csv_path = args.output_csv or (
-        args.output_dir
-        / "results"
-        / f"chess_{safe_model}_{run_id}.csv"
-    )
-    if args.append and args.output_csv is None:
-        parser.error("--append requires --output-csv.")
     try:
         clients = create_clients(
-            [args.white_model, black_model],
+            [args.white_model, args.black_model],
             args.openai_api_key,
             args.groq_api_key,
+            args.anthropic_api_key,
         )
-        execute_batch(
-            args.white_model,
-            black_model,
-            args.trials,
-            args.max_plies,
-            args.output_dir,
-            csv_path,
-            clients,
-            run_id,
-            args.append,
-        )
-    except (FileExistsError, ValueError) as error:
+        for trial_num in range(1, args.trials + 1):
+            res = run_trial(
+                trial_num,
+                args.white_model,
+                args.black_model,
+                args.max_plies,
+                clients,
+                run_id,
+            )
+            print(
+                f"[Cloud Logged] Trial {trial_num:02d}/{args.trials:02d} | "
+                f"Status: {res['status']} | Plies: {res['plies_survived']} | "
+                f"Note: {res['failure_reason']}"
+            )
+    except ValueError as error:
         parser.error(str(error))
 
 

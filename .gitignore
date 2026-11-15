@@ -26,3 +26,5 @@ Thumbs.db
 *.log
 /node_modules/
 /web/assets/app.css
+/web/chess-replay/assets/chess-review.js
+/web/chess-replay/assets/main.css
