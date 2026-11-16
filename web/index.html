@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>The Hallucination Cascade | Multi-Agent LLM Research Portal</title>
+  <title>THE AI HALLUCINATION CASCADE | A Purdue Undergrad Research Study</title>
   
   <link rel="stylesheet" href="assets/app.css" />
   
@@ -14,179 +14,547 @@
   
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Strict Black & Gold Theme + Trending Carousel & Spinner Styles -->
+  <style>
+    :root {
+      --purdue-gold: #CFB991;
+      --purdue-gold-bright: #DDB945;
+      --purdue-gold-dim: rgba(207, 185, 145, 0.16);
+      --purdue-black: #080808;
+      --purdue-surface: #121212;
+      --purdue-elevated: #1b1b1b;
+      --purdue-border: rgba(207, 185, 145, 0.28);
+      --purdue-text: #F5F2EB;
+      --purdue-muted: #B8AD99;
+    }
+
+    body, .bg-archival {
+      background-color: var(--purdue-black) !important;
+      background-image: radial-gradient(rgba(207, 185, 145, 0.1) 1px, transparent 1px) !important;
+      background-size: 24px 24px !important;
+      color: var(--purdue-text) !important;
+    }
+
+    /* Hide the old status banner completely even if another script touches it */
+    #data-status-banner {
+      display: none !important;
+    }
+
+    /* Remap legacy cream/wood classes used in JS files to Black & Gold */
+    .bg-cream-bg { background-color: var(--purdue-black) !important; }
+    .bg-cream-card { background-color: var(--purdue-surface) !important; }
+    .hover\:bg-cream-card:hover, .hover\:bg-cream-hover:hover { background-color: var(--purdue-elevated) !important; }
+    .border-cream-border { border-color: var(--purdue-border) !important; }
+
+    .text-wood-espresso { color: var(--purdue-text) !important; }
+    .text-wood-umber { color: var(--purdue-muted) !important; }
+    .text-wood-walnut, .text-wood-amber { color: var(--purdue-gold) !important; }
+    .group:hover .group-hover\:text-wood-walnut { color: var(--purdue-gold-bright) !important; }
+
+    .bg-wood-espresso { background-color: #050505 !important; }
+    .bg-wood-walnut {
+      background-color: var(--purdue-gold) !important;
+      color: #000000 !important;
+    }
+    .hover\:bg-wood-walnutHover:hover {
+      background-color: var(--purdue-gold-bright) !important;
+      color: #000000 !important;
+    }
+    .bg-wood-walnut\/10, .bg-wood-amber\/10, .bg-wood-amber\/15, .bg-wood-amber\/20 {
+      background-color: var(--purdue-gold-dim) !important;
+    }
+    .border-wood-walnut, .border-wood-amber\/40, .hover\:border-wood-walnut:hover {
+      border-color: var(--purdue-gold) !important;
+    }
+
+    /* Centered Header & 3 Floating Pill Buttons */
+    .hero-header-shell {
+      position: relative;
+      padding: 3.25rem 1.25rem 2.5rem;
+      text-align: center;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(207, 185, 145, 0.24), transparent 68%),
+        linear-gradient(180deg, #14110b 0%, #080808 100%);
+      border-bottom: 1px solid var(--purdue-border);
+    }
+
+    .floater-nav {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.85rem;
+      margin-top: 1.75rem;
+    }
+
+    .floater-pill {
+      padding: 0.65rem 1.65rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: var(--purdue-text);
+      background: rgba(207, 185, 145, 0.14);
+      border: 1px solid rgba(207, 185, 145, 0.38);
+      backdrop-filter: blur(8px);
+      transition: all 160ms ease;
+      cursor: pointer;
+    }
+
+    .floater-pill:hover {
+      background: rgba(207, 185, 145, 0.28);
+      border-color: var(--purdue-gold);
+      transform: translateY(-1px);
+    }
+
+    .floater-pill.active-pill {
+      background: var(--purdue-gold) !important;
+      color: #000000 !important;
+      border-color: #ffffff !important;
+      box-shadow: 0 6px 20px rgba(207, 185, 145, 0.32);
+    }
+
+    select, input[type="search"] {
+      background-color: var(--purdue-surface) !important;
+      color: var(--purdue-text) !important;
+      border-color: var(--purdue-border) !important;
+    }
+
+    /* Trending News Scroller / Carousel */
+    .trending-shell {
+      position: relative;
+      border-radius: 1.25rem;
+      background: linear-gradient(145deg, #15130f 0%, #0d0d0d 100%);
+      border: 1px solid var(--purdue-border);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65);
+      overflow: hidden;
+      touch-action: pan-y;
+    }
+
+    .trending-slide {
+      display: none;
+      padding: 2rem 2rem 2.25rem;
+      min-height: 330px;
+      animation: slideFadeIn 360ms ease-out;
+      user-select: none;
+      cursor: default;
+    }
+
+    .trending-slide.active-slide {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    @keyframes slideFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .llm-player-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-radius: 0.85rem;
+      background: rgba(207, 185, 145, 0.07);
+      border: 1px solid rgba(207, 185, 145, 0.24);
+    }
+
+    .llm-logo-badge {
+      width: 2.35rem;
+      height: 2.35rem;
+      border-radius: 0.65rem;
+      background: rgba(207, 185, 145, 0.16);
+      border: 1px solid var(--purdue-gold);
+      color: var(--purdue-gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    .ticker-dot {
+      height: 0.5rem;
+      width: 1.75rem;
+      border-radius: 9999px;
+      background: rgba(207, 185, 145, 0.22);
+      border: none;
+      cursor: pointer;
+      transition: all 200ms ease;
+    }
+
+    .ticker-dot.active-dot {
+      width: 3rem;
+      background: var(--purdue-gold);
+    }
+
+    .ticker-pagination {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: .45rem;
+      max-width: 65%;
+    }
+
+    .featured-video-card {
+      position: relative;
+      display: block;
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+      border: 1px solid var(--purdue-border);
+      border-radius: 0.85rem;
+      background: #000;
+    }
+
+    .featured-video-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 240ms ease;
+    }
+
+    .featured-video-card:hover img,
+    .featured-video-card:focus-visible img {
+      transform: scale(1.04);
+    }
+
+    .featured-video-title {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: flex-end;
+      padding: 1rem;
+      background: linear-gradient(180deg, transparent 20%, rgba(0,0,0,.88));
+      color: var(--purdue-text);
+      opacity: 0;
+      transition: opacity 180ms ease;
+    }
+
+    .featured-video-card:hover .featured-video-title,
+    .featured-video-card:focus-visible .featured-video-title {
+      opacity: 1;
+    }
+
+    .featured-model-logo {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: .7rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      background: #fff;
+      border: 1px solid var(--purdue-gold);
+    }
+
+    .featured-model-logo img {
+      width: 1.55rem;
+      height: 1.55rem;
+      object-fit: contain;
+    }
+
+    .featured-player-logo-large {
+      width: 5rem;
+      height: 5rem;
+      border-radius: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      background: #fff;
+      border: 1px solid var(--purdue-gold);
+    }
+
+    .featured-player-logo-large img {
+      width: 3rem;
+      height: 3rem;
+      object-fit: contain;
+    }
+
+    .featured-game-board {
+      position: relative;
+      width: 100%;
+      max-width: 280px;
+      margin: 0 auto;
+    }
+
+    .featured-blunder-badge {
+      position: absolute;
+      top: .35rem;
+      right: .35rem;
+      z-index: 10;
+      width: 3.2rem;
+      height: 3.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      background: #dc2626;
+      color: #fff;
+      font: 900 1.45rem 'JetBrains Mono', monospace;
+      box-shadow: 0 5px 16px rgba(0, 0, 0, .45);
+      transform: rotate(10deg);
+    }
+
+    .featured-game-board > div {
+      max-width: 100% !important;
+    }
+
+    .featured-game-board [style*="font-size: 26px"] {
+      font-size: 19px !important;
+    }
+
+    /* Fetching Match Loading Circle */
+    @keyframes purdueSpin {
+      to { transform: rotate(360deg); }
+    }
+
+    .fetching-match-spinner {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 3px solid rgba(207, 185, 145, 0.2);
+      border-top-color: #CFB991;
+      animation: purdueSpin 0.75s linear infinite;
+    }
+  </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-wood-walnut selection:text-cream-bg">
   <div class="bg-archival min-h-screen flex flex-col flex-grow">
 
-    <!-- Top Academic Banner -->
-    <div class="bg-wood-espresso text-cream-bg text-xs py-2 px-4 border-b border-wood-walnut">
+    <!-- Top Cloud Status Bar -->
+    <div class="bg-wood-espresso text-xs py-2 px-4 border-b border-cream-border">
       <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
-        <div class="flex items-center gap-2 font-mono">
-          <span class="inline-block w-2 h-2 rounded-full bg-wood-amber animate-pulse"></span>
-          <span>RESEARCH TALK // STATE TRACKING IN GAME-PLAYING LANGUAGE MODELS</span>
+        <div class="flex items-center gap-2 font-mono text-wood-umber">
+          <span class="inline-block w-2 h-2 rounded-full" style="background-color: #CFB991;"></span>
+          <span>PURDUE UNIVERSITY // UNDERGRADUATE RESEARCH</span>
         </div>
         <div class="flex items-center gap-4">
-          <span id="db-status-indicator" class="font-mono text-[11px] text-cream-border flex items-center gap-1">
-            <i data-lucide="database" class="w-3 h-3"></i> Research Data: Local Files
+          <span id="db-status-indicator" class="font-mono text-[11px] text-wood-walnut flex items-center gap-1">
+            <i data-lucide="cloud" class="w-3 h-3"></i> Research Data Loaded from cloud
           </span>
-          <button onclick="openQRModal()" class="underline hover:text-wood-amber transition-colors font-medium flex items-center gap-1">
-            <i data-lucide="qr-code" class="w-3.5 h-3.5"></i> Audience QR Code
-          </button>
         </div>
       </div>
     </div>
 
-    <!-- Main Navigation Header -->
-    <header class="sticky top-0 z-30 bg-cream-bg/95 backdrop-blur-md border-b border-cream-border shadow-sm">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between py-4 gap-4">
-          <div class="flex items-center justify-between">
-            <button onclick="switchTab('home')" class="text-left group flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-wood-walnut text-cream-bg flex items-center justify-center shadow-inner group-hover:bg-wood-walnutHover transition-colors">
-                <i data-lucide="crown" class="w-5 h-5"></i>
-              </div>
-              <div>
-                <h1 class="font-serif font-bold text-lg sm:text-xl text-wood-espresso tracking-tight leading-none">
-                  The Hallucination Cascade
-                </h1>
-                <p class="text-xs text-wood-umber font-mono mt-1">
-                  State Tracking Collapse in Multi-Agent LLMs
-                </p>
-              </div>
-            </button>
-          </div>
+    <!-- Centered Hero Header with 3 Floating Pill Buttons -->
+    <header class="hero-header-shell">
+      <div class="max-w-4xl mx-auto">
+        <h1 class="font-serif font-bold text-4xl sm:text-6xl tracking-tight leading-none" style="color: #FFFFFF;">
+          AI HALLUCINATION CASCADE
+        </h1>
+        <p class="font-mono text-xs sm:text-sm uppercase tracking-widest mt-3" style="color: #CFB991;">
+          A Purdue Undergrad Research Study
+        </p>
 
-          <nav class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0" aria-label="Main Navigation">
-            <button onclick="switchTab('home')" id="nav-home" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-1.5">
-              <i data-lucide="book-open" class="w-4 h-4"></i> Overview
-            </button>
-            <button onclick="switchTab('comparison')" id="nav-comparison" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-1.5">
-              <i data-lucide="bar-chart-3" class="w-4 h-4"></i> AI Models Comparison
-            </button>
-            <button onclick="switchTab('trials')" id="nav-trials" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-1.5">
-              <i data-lucide="swords" class="w-4 h-4"></i> All Games (<span id="nav-trial-count">0</span>)
-            </button>
-            <button onclick="switchTab('sources')" id="nav-sources" class="nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-1.5">
-              <i data-lucide="library" class="w-4 h-4"></i> Sources & Levy
-            </button>
-            <button onclick="switchTab('admin')" id="nav-admin" class="nav-btn hidden px-3.5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap items-center gap-1.5 bg-wood-amber/15 text-wood-walnut border border-wood-amber/40">
-              <i data-lucide="terminal" class="w-4 h-4"></i> Admin Console
-            </button>
-          </nav>
-        </div>
+        <!-- 3 Floaters -->
+        <nav class="floater-nav" aria-label="Main Navigation">
+          <button type="button" onclick="selectFloaterTab('home')" id="nav-home" class="floater-pill active-pill">
+            Home
+          </button>
+          <button type="button" onclick="selectFloaterTab('comparison')" id="nav-comparison" class="floater-pill">
+            AI Models Comparison
+          </button>
+          <button type="button" onclick="selectFloaterTab('trials')" id="nav-trials" class="floater-pill">
+            All Games (<span id="nav-trial-count">0</span>)
+          </button>
+        </nav>
       </div>
     </header>
 
     <!-- Main Content Container -->
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <aside id="data-status-banner" role="status" class="mb-8 rounded-xl border border-wood-amber/40 bg-wood-amber/10 px-4 py-3 text-sm text-wood-espresso">
-        <strong>Data note:</strong> All dashboard metrics, trial cards, and turn-by-turn replays stream live from the verified Supabase Cloud archive.
-      </aside>
+      <!-- Hidden placeholder so old scripts referencing #data-status-banner don't error -->
+      <aside id="data-status-banner" class="hidden"></aside>
 
-      <!-- TAB 1: HOME / OVERVIEW -->
-      <section id="tab-home" class="tab-section space-y-10">
-        <!-- Hero Card -->
-        <div class="relative rounded-2xl bg-cream-card border border-cream-border p-6 sm:p-10 shadow-sm overflow-hidden">
-          <div class="max-w-3xl space-y-5 relative z-10">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-wood-walnut/10 border border-wood-walnut/20 text-wood-walnut text-xs font-mono font-semibold">
-              <span>RESEARCH PORTAL & EXPERIMENTAL PROJECT</span>
+      <!-- TAB 1: HOME -->
+      <section id="tab-home" class="tab-section space-y-8">
+
+        <!-- Featured players, games, and video carousel -->
+        <div class="trending-shell">
+          <div class="px-6 py-3 border-b border-cream-border flex items-center justify-between gap-3" style="background: rgba(207, 185, 145, 0.06);">
+            <div class="flex items-center gap-2.5 font-mono text-xs">
+              <span style="color: #CFB991; font-weight: 700; letter-spacing: 0.08em;">FEATURED</span>
+              <span id="ticker-step-label" class="text-wood-umber">// -- OF --</span>
             </div>
-            <h2 class="font-serif text-3xl sm:text-5xl font-bold text-wood-espresso leading-tight">
-              When ChatGPT Spawns a Rook Out of Nowhere.
-            </h2>
-            <p class="text-wood-umber text-base sm:text-lg leading-relaxed">
-              This project investigates how language models maintain game state over extended play, what kinds of errors occur, and how an independent rules engine can measure them.
-            </p>
-            <div class="pt-2 flex flex-wrap items-center gap-3">
-              <button onclick="switchTab('trials')" class="px-5 py-2.5 rounded-xl bg-wood-walnut hover:bg-wood-walnutHover text-cream-bg font-semibold text-sm shadow-sm transition-all flex items-center gap-2">
-                <i data-lucide="play" class="w-4 h-4"></i> Explore Game Trials & PGNs
-              </button>
-              <button onclick="switchTab('comparison')" class="px-5 py-2.5 rounded-xl bg-cream-bg hover:bg-cream-hover text-wood-espresso border border-cream-border font-semibold text-sm transition-all flex items-center gap-2">
-                <i data-lucide="layers" class="w-4 h-4 text-wood-walnut"></i> Compare AI Models
-              </button>
-              <button type="button" disabled title="Presentation slides are not published yet." class="px-4 py-2.5 rounded-xl bg-cream-bg text-wood-umber border border-cream-border font-mono text-xs flex items-center gap-2 opacity-60 cursor-not-allowed">
-                <i data-lucide="presentation" class="w-4 h-4 text-wood-amber"></i> Slides Coming Soon
-              </button>
-              <button onclick="openQRModal()" class="px-4 py-2.5 rounded-xl bg-wood-espresso hover:bg-wood-walnut text-cream-bg font-mono text-xs transition-all flex items-center gap-2">
-                <i data-lucide="qr-code" class="w-4 h-4"></i> Show Slide QR
-              </button>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="stepTicker(-1)" class="px-2.5 py-1 rounded border border-cream-border text-xs font-mono text-wood-walnut hover:bg-cream-hover">←</button>
+              <button type="button" onclick="stepTicker(1)" class="px-2.5 py-1 rounded border border-cream-border text-xs font-mono text-wood-walnut hover:bg-cream-hover">→</button>
             </div>
           </div>
-          <div class="hidden lg:flex absolute -right-8 -bottom-8 opacity-10 pointer-events-none select-none">
-            <i data-lucide="castle" class="w-72 h-72 text-wood-walnut"></i>
+
+          <div id="ticker-slides">
+          <div class="trending-slide active-slide" data-slide="0">
+            <div class="w-full flex items-center justify-center text-sm text-wood-umber">
+              Loading...
+            </div>
+          </div>
+
+          <div class="trending-slide" data-slide="1">
+            <div class="w-full space-y-5">
+              <div>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-wood-walnut/10 border border-cream-border text-wood-walnut text-xs font-mono font-semibold">LONGEST VERIFIED MATCHES</div>
+                <h2 class="font-serif text-2xl sm:text-3xl font-bold text-wood-espresso mt-3">FEATURED GAMES</h2>
+                <p class="text-sm text-wood-umber mt-1">Some of our most exciting recorded matches</p>
+              </div>
+              <p class="text-xs text-wood-umber">Loading...</p>
+            </div>
+          </div>
+
+          <div class="trending-slide" data-slide="2">
+            <div class="w-full space-y-5">
+              <div>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-wood-walnut/10 border border-cream-border text-wood-walnut text-xs font-mono font-semibold">
+                  <span>REAL-WORLD CASE STUDIES // GOTHAMCHESS</span>
+                </div>
+                <h2 class="font-serif text-2xl sm:text-3xl font-bold text-wood-espresso mt-3">FEATURED VIDEOS</h2>
+                <p class="text-sm text-wood-umber mt-1">Click to watch on YouTube.</p>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <a class="featured-video-card" href="https://youtu.be/hKzsmv6B8aY?si=TOvR3xt7S2zCT9lj" target="_blank" rel="noopener noreferrer" aria-label="Watch ChatGPT Vs Martin Bot: INSANE CHESS on YouTube">
+                  <img src="https://i.ytimg.com/vi/hKzsmv6B8aY/hqdefault.jpg" alt="GothamChess video thumbnail" loading="eager" decoding="async">
+                  <span class="featured-video-title"><span class="font-serif text-lg font-bold">ChatGPT Vs Martin Bot: INSANE CHESS</span></span>
+                </a>
+                <a class="featured-video-card" href="https://youtu.be/sskvj1_ehx4?si=zeRuo7mJT5JenUL2" target="_blank" rel="noopener noreferrer" aria-label="Watch GPT-6 ASTRA vs CLAUDE OPUS 5.5 (10,000 ELO CHESS) on YouTube">
+                  <img src="https://i.ytimg.com/vi/sskvj1_ehx4/hqdefault.jpg" alt="GothamChess video thumbnail" loading="eager" decoding="async">
+                  <span class="featured-video-title"><span class="font-serif text-lg font-bold">GPT-6 ASTRA vs CLAUDE OPUS 5.5 (10,000 ELO CHESS)</span></span>
+                </a>
+              </div>
+            </div>
+          </div>
+          </div>
+
+          <!-- Bottom Carousel Dots -->
+          <div class="px-6 py-3 border-t border-cream-border flex items-center justify-between">
+            <div id="ticker-dots" class="ticker-pagination" role="group" aria-label="Featured pages"></div>
           </div>
         </div>
 
-        <!-- Live Aggregate Metrics Row -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="home-metrics-grid"></div>
+        <!-- 4 LIVE AGGREGATE METRIC CARDS (Right below the Trending Scroller) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="home-metrics-grid">
+          <div class="bg-cream-card border border-cream-border rounded-2xl p-5 flex items-start justify-between">
+            <div>
+              <div class="text-xs font-mono uppercase text-wood-umber">TOTAL MATCHES LOGGED</div>
+              <div class="font-serif text-3xl font-bold text-wood-walnut mt-1">…</div>
+              <div class="text-xs text-wood-umber mt-1">Across 5 games</div>
+            </div>
+          </div>
+          <div class="bg-cream-card border border-cream-border rounded-2xl p-5 flex items-start justify-between">
+            <div>
+              <div class="text-xs font-mono uppercase text-wood-umber">WI</div>
+              <div class="font-serif text-3xl font-bold text-wood-terracotta mt-1">…</div>
+              <div class="text-xs text-wood-umber mt-1">wierd index</div>
+            </div>
+          </div>
+          <div class="bg-cream-card border border-cream-border rounded-2xl p-5 flex items-start justify-between">
+            <div>
+              <div class="text-xs font-mono uppercase text-wood-umber">ILLEGAL MOVES RECORDED</div>
+              <div class="font-serif text-3xl font-bold text-wood-walnut mt-1">…</div>
+              <div class="text-xs text-wood-umber mt-1">Total number of rule violations</div>
+            </div>
+          </div>
+          <div class="bg-cream-card border border-cream-border rounded-2xl p-5 flex items-start justify-between">
+            <div>
+              <div class="text-xs font-mono uppercase text-wood-umber">HOW MANY TIMES AI ASKED FOR HELP</div>
+              <div class="font-serif text-3xl font-bold text-wood-walnut mt-1">…</div>
+              <div class="text-xs text-wood-umber mt-1">Mid-game board printouts requested</div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-cream-bg border border-cream-border text-wood-walnut">
+              <i data-lucide="help-circle" class="w-4 h-4"></i>
+            </div>
+          </div>
+        </div>
 
-        <!-- Research Thesis & Methodology Grid -->
+        <!-- Study Overview & Cloud Storage Summary -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div class="lg:col-span-2 bg-cream-card border border-cream-border rounded-2xl p-6 sm:p-8 space-y-4">
             <div class="flex items-center gap-2 text-wood-walnut font-mono text-xs uppercase tracking-wider font-semibold">
-              <i data-lucide="cpu" class="w-4 h-4"></i> Core Phenomenon
+              <i data-lucide="book-open" class="w-4 h-4"></i> Study Design
             </div>
             <h3 class="font-serif text-2xl font-bold text-wood-espresso">
-              A Framework for Investigating State Tracking
+              METHODOLOGY
             </h3>
             <p class="text-sm text-wood-umber leading-relaxed">
-              The project explores how model-generated actions compare with deterministic game rules. The chess and simplified UNO runners in this repository are experiments in progress; the stages below describe questions to investigate, not measured turn thresholds.
+              Language models receive move updates turn-by-turn across five games (Tic-Tac-Toe, Connect Four, UNO, Checkers, and Chess) and must reply with legal moves without an external board display unless requested.
             </p>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
               <div class="bg-cream-bg p-4 rounded-xl border border-cream-border">
-                <span class="font-mono text-xs font-bold text-wood-amber">STAGE 01 // BASELINE</span>
-                <h4 class="font-serif font-bold text-wood-espresso mt-1">Valid Play</h4>
+                <span class="font-mono text-xs font-bold text-wood-walnut">1. LEGAL PLAY</span>
+                <h4 class="font-serif font-bold text-wood-espresso mt-1">Baseline Moves</h4>
                 <p class="text-xs text-wood-umber mt-1.5 leading-relaxed">
-                  Measure legal actions and game outcomes from a recorded starting state.
+                  Record how many turns each model completes from the starting state.
                 </p>
               </div>
               <div class="bg-cream-bg p-4 rounded-xl border border-cream-border">
-                <span class="font-mono text-xs font-bold text-wood-walnut">STAGE 02 // STATE TRACKING</span>
-                <h4 class="font-serif font-bold text-wood-espresso mt-1">Possible Drift</h4>
+                <span class="font-mono text-xs font-bold text-wood-walnut">2. THE "STATE DRIFT"</span>
+                <h4 class="font-serif font-bold text-wood-espresso mt-1">Memory Errors</h4>
                 <p class="text-xs text-wood-umber mt-1.5 leading-relaxed">
-                  Examine whether move history, context length, or prompts correlate with state-tracking errors.
+                  Identify when a model forgets square occupancy, card hands, or piece positions.
                 </p>
               </div>
-              <div class="bg-cream-bg p-4 rounded-xl border border-wood-terracotta/40">
-                <span class="font-mono text-xs font-bold text-wood-terracotta">STAGE 03 // FAILURE ANALYSIS</span>
-                <h4 class="font-serif font-bold text-wood-espresso mt-1">Illegal Actions</h4>
+              <div class="bg-cream-bg p-4 rounded-xl border border-cream-border">
+                <span class="font-mono text-xs font-bold text-wood-walnut">3. REFEREE AUDIT</span>
+                <h4 class="font-serif font-bold text-wood-espresso mt-1">Failure Logs</h4>
                 <p class="text-xs text-wood-umber mt-1.5 leading-relaxed">
-                  Record invalid actions and determine how an explicit referee should handle them.
+                  Separate true illegal moves from API timeouts and token truncations.
+                  (this is because some of our games end up so complex (for the model) that it can't respond
+                  within the allotted MAX COMPLETION TOKENS)
                 </p>
               </div>
             </div>
           </div>
 
-          <div class="bg-wood-espresso text-cream-bg rounded-2xl p-6 sm:p-8 flex flex-col justify-between space-y-6">
+          <div class="bg-cream-card rounded-2xl p-6 sm:p-8 border border-cream-border flex flex-col justify-between space-y-6">
             <div class="space-y-3">
-              <div class="inline-flex items-center gap-1.5 text-wood-amber font-mono text-xs">
-                <i data-lucide="git-branch" class="w-4 h-4"></i> REPRODUCIBLE RESEARCH TOOLS
+              <div class="inline-flex items-center gap-1.5 text-wood-walnut font-mono text-xs">
+                <i data-lucide="cloud" class="w-4 h-4"></i> CLOUD INFRASTRUCTURE
               </div>
-              <h3 class="font-serif text-2xl font-bold">
-                Reproducible Benchmarks & Logs
+              <h3 class="font-serif text-2xl font-bold text-wood-espresso">
+                Cloud-Stored Trial Archive
               </h3>
-              <p class="text-xs text-cream-border leading-relaxed">
-                The chess runner records prompts, SAN moves, board snapshots, and audit logs. The UNO runner records trial outcomes. Token usage and API costs are not currently tracked.
+              <p class="text-xs text-wood-umber leading-relaxed">
+                Every trial outcome, exact prompt, and turn-by-turn replay is logged directly to Supabase PostgreSQL from the Python game runners.
+                This is open-sourced, so anyone can try running these games with their LLMs and the outcome will be stored in our archive.
               </p>
             </div>
-            <div class="space-y-2.5 pt-2 border-t border-wood-walnut/50 text-xs font-mono">
+            <div class="space-y-2.5 pt-2 border-t border-cream-border text-xs font-mono">
               <div class="flex justify-between">
-                <span class="text-cream-border">Board Renderers:</span>
-                <span class="text-wood-amber">Modular PGN / State</span>
+                <span class="text-wood-umber">Database Layer:</span>
+                <span class="text-wood-walnut">Supabase Cloud (PostgreSQL)</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-cream-border">Database Layer:</span>
-                <span class="text-wood-amber">Supabase Cloud (PostgreSQL)</span>
+                <span class="text-wood-umber">Games Tracked:</span>
+                <span class="text-wood-walnut">5 (as of 11-18-2026)</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-cream-border">Admin Entry:</span>
-                <span class="text-wood-amber">localhost gated</span>
+                <span class="text-wood-umber">Replay Storage:</span>
+                <span class="text-wood-walnut">Cloud JSON Scrubbers</span>
               </div>
             </div>
-            <button onclick="switchTab('sources')" class="w-full py-2.5 px-4 rounded-xl bg-wood-walnut hover:bg-wood-amber text-cream-bg font-semibold text-xs transition-colors flex items-center justify-center gap-2">
-              <i data-lucide="video" class="w-4 h-4"></i> Watch Levy (GothamChess) Breakdowns
-            </button>
           </div>
+        </div>
+
+        <!-- Literature & Sources Section on Home -->
+        <div class="space-y-6 pt-4 border-t border-cream-border">
+          <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <span class="font-mono text-xs uppercase tracking-wider text-wood-walnut font-semibold">References &amp; Media</span>
+              <h3 class="font-serif text-2xl font-bold text-wood-espresso mt-1">Literature Review &amp; Supporting Sources</h3>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="filterSources('ALL')" id="src-btn-ALL" class="src-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-wood-walnut text-cream-bg">All Sources</button>
+              <button onclick="filterSources('bibliography')" id="src-btn-bibliography" class="src-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-cream-card text-wood-umber border border-cream-border hover:bg-cream-hover">Bibliography</button>
+              <button onclick="filterSources('levy_video')" id="src-btn-levy_video" class="src-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-cream-card text-wood-umber border border-cream-border hover:bg-cream-hover">Videos</button>
+              <button onclick="filterSources('interview')" id="src-btn-interview" class="src-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-cream-card text-wood-umber border border-cream-border hover:bg-cream-hover">Interviews</button>
+            </div>
+          </div>
+          <div id="sources-grid-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
         </div>
       </section>
 
@@ -195,8 +563,8 @@
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-cream-border pb-6">
           <div>
             <span class="font-mono text-xs uppercase tracking-wider text-wood-walnut font-semibold">Cross-Game Evaluation</span>
-            <h2 class="font-serif text-3xl font-bold text-wood-espresso mt-1">AI Models Performance Matrix</h2>
-            <p class="text-sm text-wood-umber mt-1">Flick between games to inspect how each architecture handles spatial and sequential state tracking.</p>
+            <h2 class="font-serif text-3xl font-bold text-wood-espresso mt-1">AI Models Comparison</h2>
+            <p class="text-sm text-wood-umber mt-1">Select a game to inspect how each model handles state tracking.</p>
           </div>
           <div class="flex flex-wrap gap-2" id="comparison-game-pills"></div>
         </div>
@@ -205,13 +573,13 @@
         <div id="comparison-models-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
       </section>
 
-<!-- TAB 3: ALL GAMES (TRIAL EXPLORER) -->
+      <!-- TAB 3: ALL GAMES (TRIAL EXPLORER) -->
       <section id="tab-trials" class="tab-section hidden space-y-6">
         <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4 border-b border-cream-border pb-6">
           <div>
             <span class="font-mono text-xs uppercase tracking-wider text-wood-walnut font-semibold">Cloud Research Records</span>
             <h2 class="font-serif text-3xl font-bold text-wood-espresso mt-1">All Games</h2>
-            <p class="text-sm text-wood-umber mt-1">Showing 25 trials per page balanced across games. Tap any card to inspect the match record or step through the replay.</p>
+            <p class="text-sm text-wood-umber mt-1">Showing cloud-recorded games. Click any card to inspect the match record or step through the replay.</p>
           </div>
           <div class="flex flex-wrap items-center gap-3">
             <select id="filter-game" aria-label="Filter by game" class="px-3.5 py-2 rounded-xl bg-cream-card border border-cream-border text-sm font-medium text-wood-espresso focus:outline-none focus:border-wood-walnut">
@@ -224,13 +592,13 @@
           </div>
         </div>
 
-        <p id="trial-dashboard-status" class="text-sm text-wood-umber" role="status" aria-live="polite">Loading cloud research records…</p>
+        <p id="trial-dashboard-status" class="text-sm text-wood-umber" role="status" aria-live="polite">Loading…</p>
         <div id="trial-summary" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
 
         <!-- 25-Card Grid Container -->
         <div class="bg-cream-card border border-cream-border rounded-2xl shadow-sm overflow-hidden">
           <div class="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-cream-border">
-            <h3 class="font-serif text-xl font-bold text-wood-espresso">Trial Cards (25 per page)</h3>
+            <h3 class="font-serif text-xl font-bold text-wood-espresso">Games</h3>
             <span id="trial-page-label" class="text-xs font-mono text-wood-umber"></span>
           </div>
 
@@ -246,133 +614,62 @@
         </div>
       </section>
 
-      <!-- TAB 4: SOURCES & MEDIA -->
-      <section id="tab-sources" class="tab-section hidden space-y-8">
-        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-cream-border pb-6">
-          <div>
-            <span class="font-mono text-xs uppercase tracking-wider text-wood-walnut font-semibold">Primary & Secondary Literature</span>
-            <h2 class="font-serif text-3xl font-bold text-wood-espresso mt-1">Sources, Interviews & Levy Archives</h2>
-            <p class="text-sm text-wood-umber mt-1">Curated media showcasing real-world LLM board hallucinations, expert interviews, and academic citations.</p>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button onclick="filterSources('ALL')" id="src-btn-ALL" class="src-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-wood-walnut text-cream-bg">All Sources</button>
-            <button onclick="filterSources('levy_video')" id="src-btn-levy_video" class="src-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-cream-card text-wood-umber border border-cream-border hover:bg-cream-hover">Levy's Videos (GothamChess)</button>
-            <button onclick="filterSources('interview')" id="src-btn-interview" class="src-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-cream-card text-wood-umber border border-cream-border hover:bg-cream-hover">Interview Recordings</button>
-            <button onclick="filterSources('bibliography')" id="src-btn-bibliography" class="src-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-cream-card text-wood-umber border border-cream-border hover:bg-cream-hover">Annotated Bibliography</button>
-          </div>
-        </div>
-        <div id="sources-grid-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
-      </section>
-
-      <!-- TAB 5: ADMIN CONSOLE -->
-      <section id="tab-admin" class="tab-section hidden space-y-8">
-        <!-- Keep existing Admin Console HTML intact here -->
-        <div class="bg-wood-espresso text-cream-bg rounded-2xl p-6 border border-wood-walnut flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div class="space-y-1">
-            <div class="inline-flex items-center gap-2 text-wood-amber font-mono text-xs">
-              <i data-lucide="shield-check" class="w-4 h-4"></i> LOCALHOST ADMIN ENVIRONMENT UNLOCKED
-            </div>
-            <h2 class="font-serif text-2xl font-bold">Research Data & Database Console</h2>
-            <p class="text-xs text-cream-border">Add trials, move logs, or sources without touching HTML code.</p>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button onclick="exportMasterJSON()" class="px-4 py-2 rounded-xl bg-wood-walnut hover:bg-wood-amber text-cream-bg text-xs font-mono font-semibold transition-colors flex items-center gap-1.5">
-              <i data-lucide="download" class="w-4 h-4"></i> Export Master JSON
-            </button>
-            <label class="px-4 py-2 rounded-xl bg-cream-bg/10 hover:bg-cream-bg/20 text-cream-bg text-xs font-mono font-semibold transition-colors flex items-center gap-1.5 cursor-pointer border border-cream-border/20">
-              <i data-lucide="upload" class="w-4 h-4"></i> Import JSON
-              <input type="file" accept=".json" onchange="importMasterJSON(event)" class="hidden" />
-            </label>
-          </div>
-        </div>
-        <!-- (Paste your existing Admin grid forms here unchanged) -->
-      </section>
+      <!-- Hidden placeholders so legacy JS functions don't throw null errors -->
+      <section id="tab-sources" class="hidden"></section>
+      <section id="tab-admin" class="hidden"></section>
+      <button id="nav-sources" class="hidden"></button>
+      <button id="nav-admin" class="hidden"></button>
     </main>
 
     <!-- Footer -->
-    <footer class="border-t border-cream-border bg-cream-card/70 py-6 px-4 mt-16">
+    <footer class="border-t border-cream-border bg-cream-card py-6 px-4 mt-16">
       <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-wood-umber">
         <div class="flex items-center gap-2">
-          <span class="font-serif font-bold text-wood-espresso">The Hallucination Cascade</span>
+          <span class="font-serif font-bold text-wood-walnut">AI Hallucinations cascade</span>
           <span>•</span>
-          <span>Static site · Vercel-ready</span>
+          <span>A Purdue Undergrad Research Study</span>
         </div>
-        <div class="flex items-center gap-4 font-mono">
-          <span id="hostname-display" class="text-[11px]">Host: detecting...</span>
-          <button onclick="toggleSimulatedAdmin()" id="sim-admin-btn" class="px-2.5 py-1 rounded bg-wood-walnut/10 hover:bg-wood-walnut/20 text-wood-walnut border border-wood-walnut/30 transition-colors">
-            [Dev: Toggle Localhost Admin]
-          </button>
+        <div class="flex items-center gap-3 font-mono text-[11px] text-wood-umber">
+          <span>Database: Supabase Cloud (PostgreSQL)</span>
+          <span id="hostname-display" class="hidden"></span>
         </div>
       </div>
     </footer>
 
-    <!-- QR Modal & Toast -->
-    <div id="qr-modal" class="fixed inset-0 z-50 hidden bg-wood-espresso/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div class="bg-cream-bg border-2 border-wood-walnut rounded-2xl max-w-md w-full p-6 sm:p-8 text-center space-y-5 shadow-2xl relative">
-        <button onclick="closeQRModal()" class="absolute top-4 right-4 text-wood-umber hover:text-wood-espresso">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-wood-walnut/10 text-wood-walnut font-mono text-xs font-semibold">LIVE AUDIENCE ACCESS</div>
-        <h3 class="font-serif text-2xl font-bold text-wood-espresso">Scan to Visit the Project Portal</h3>
-        <div class="bg-white p-5 rounded-2xl border border-cream-border inline-block mx-auto shadow-inner">
-          <img id="qr-image" alt="Research Portal QR Code" class="w-48 h-48 mx-auto rounded hidden" />
-        </div>
-        <div class="space-y-2">
-          <label class="block text-[11px] font-mono text-wood-umber uppercase">Portal URL:</label>
-          <div class="flex gap-2">
-            <input type="url" id="qr-url-input" placeholder="https://your-project.vercel.app" oninput="updateQRUrl(this.value)" class="flex-1 px-3 py-2 rounded-lg bg-cream-card border border-cream-border text-xs font-mono text-wood-espresso" />
-            <button onclick="copyPortalUrl()" class="px-3 py-2 rounded-lg bg-wood-walnut text-cream-bg text-xs font-mono font-semibold hover:bg-wood-walnutHover">Copy</button>
+    <div id="toast-box" class="fixed bottom-5 right-5 z-50 hidden bg-wood-espresso text-cream-bg px-4 py-3 rounded-xl shadow-lg text-sm">
+      <span id="toast-message"></span>
+    </div>
+
+    <div id="replay-overlay" class="hidden fixed inset-0 z-50 bg-black/80 p-3 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="overlay-title">
+      <div class="max-w-3xl max-h-[88vh] mx-auto bg-cream-bg border border-cream-border rounded-2xl shadow-xl flex flex-col overflow-hidden">
+        <header class="p-4 border-b border-cream-border flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <span id="overlay-game-pill" class="inline-block px-2.5 py-0.5 rounded bg-wood-walnut/10 text-wood-walnut font-mono text-[11px] uppercase"></span>
+            <h2 id="overlay-title" class="font-serif text-xl font-bold text-wood-espresso mt-1"></h2>
+            <p id="overlay-subtitle" class="font-mono text-[11px] text-wood-umber mt-0.5"></p>
           </div>
-        </div>
+          <button type="button" onclick="closeReplayOverlay()" aria-label="Close replay" class="px-3 py-1 rounded-lg border border-cream-border text-wood-espresso">×</button>
+        </header>
+        <div id="overlay-body" class="p-4 sm:p-5 space-y-4 overflow-y-auto"></div>
+        <footer id="overlay-footer" class="p-4 border-t border-cream-border flex gap-3"></footer>
       </div>
     </div>
 
-    <div id="toast-box" class="fixed bottom-5 right-5 z-50 hidden bg-wood-espresso text-cream-bg px-4 py-3 rounded-xl shadow-lg border border-wood-walnut text-xs font-mono flex items-center gap-2.5 max-w-sm">
-      <i data-lucide="check-circle-2" class="w-4 h-4 text-wood-amber shrink-0"></i>
-      <span id="toast-message">Action completed.</span>
-    </div>
+    <script src="assets/data-defaults.js"></script>
+    <script src="assets/state.js"></script>
+    <script src="assets/api/config.js"></script>
+    <script src="assets/api/supabase-client.js"></script>
+    <script src="assets/comparison-helpers.js"></script>
+    <script src="assets/comparison-math.js"></script>
+    <script src="assets/view-home.js?v=featured-carousel-10"></script>
+    <script src="assets/view-comparison.js?v=comparison-label-1"></script>
+    <script src="assets/view-sources.js"></script>
+    <script src="assets/view-admin.js"></script>
+    <script src="assets/overlay-uno.js"></script>
+    <script src="assets/overlay-checkers.js"></script>
+    <script src="assets/overlay-chess.js?v=last-move-arrows-1"></script>
+    <script src="assets/all-games.js"></script>
+    <script src="assets/main.js"></script>
   </div>
-
-  
-<!-- Slide-Up Game Replay Overlay -->
-    <div id="replay-overlay" onclick="if (event.target === this) closeReplayOverlay()" class="fixed inset-0 z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4" style="background-color: rgba(43, 29, 14, 0.78); backdrop-filter: blur(4px);">
-      <div class="bg-cream-bg border-2 border-wood-walnut rounded-2xl max-w-2xl w-full flex flex-col shadow-2xl overflow-hidden" style="max-height: 88vh;">
-        <!-- Sticky Drawer Header with Explicit Close Button -->
-        <div class="p-4 sm:p-5 border-b border-cream-border flex items-start justify-between gap-3 bg-cream-card" style="flex-shrink: 0;">
-          <div>
-            <span id="overlay-game-pill" class="font-mono text-[11px] uppercase tracking-wider px-2.5 py-0.5 rounded bg-wood-walnut/10 text-wood-walnut font-semibold">GAME</span>
-            <h3 id="overlay-title" class="font-serif text-xl sm:text-2xl font-bold text-wood-espresso mt-1">Matchup</h3>
-            <p id="overlay-subtitle" class="text-xs font-mono text-wood-umber"></p>
-          </div>
-          <button type="button" onclick="closeReplayOverlay()" class="px-3 py-1.5 rounded-lg bg-cream-bg hover:bg-cream-hover border border-cream-border text-xs font-mono font-bold text-wood-espresso transition-colors" style="flex-shrink: 0;">
-            ✕ Close
-          </button>
-        </div>
-
-        <!-- Scrollable Drawer Body (Mouse wheel scrolls THIS box, not the page behind it) -->
-        <div id="overlay-body" class="p-5 space-y-4" style="overflow-y: auto; flex: 1 1 auto; overscroll-behavior: contain;"></div>
-
-        <!-- Sticky Drawer Footer -->
-        <div id="overlay-footer" class="p-4 border-t border-cream-border bg-cream-card flex items-center justify-between gap-3" style="flex-shrink: 0;"></div>
-      </div>
-    </div>
-
-  <!-- Modular Scripts (API & Helpers First, Views Second) -->
-  <script src="./assets/api/config.js"></script>
-  <script src="./assets/api/supabase-client.js"></script>
-  <script src="./assets/comparison-helpers.js"></script>
-  <script src="./assets/comparison-math.js"></script>
-  <script src="assets/data-defaults.js"></script>
-  <script src="assets/state.js"></script>
-  <script src="assets/view-home.js"></script>
-  <script src="./assets/view-comparison.js"></script>
-  <script src="assets/view-sources.js"></script>
-  <script src="assets/view-admin.js"></script>
-  <script src="assets/overlay-uno.js"></script>
-  <script src="assets/overlay-checkers.js"></script>
-    <script src="assets/overlay-chess.js"></script>
-  <script src="assets/all-games.js"></script>
-  <script src="assets/main.js"></script>
-
 </body>
 </html>

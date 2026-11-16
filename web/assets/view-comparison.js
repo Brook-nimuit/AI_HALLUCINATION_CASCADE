@@ -5,11 +5,14 @@ let liveComparisonData = [];
 
 window.onLiveTrialsUpdated = function (trials) {
   liveComparisonData = buildComparisonFromTrials(trials);
+  if (typeof window.renderFeaturedHighlights === "function") {
+    window.renderFeaturedHighlights(trials);
+  }
 
   const banner = document.getElementById("data-status-banner");
   if (banner && liveComparisonData.length > 0) {
     banner.innerHTML =
-      "<strong>Cloud research data:</strong> AI Models Performance Matrix synchronized with " +
+      "<strong>Cloud research data:</strong> AI Models' Performance synchronized with " +
       trials.length +
       " verified trial records.";
   }
@@ -51,7 +54,7 @@ function createModelCardHtml(m) {
         </div>
         <h4 class="font-serif text-2xl font-bold text-wood-espresso">${escapeHTML(m.name)}</h4>
         <div class="p-3 rounded-xl bg-cream-bg border border-cream-border space-y-1">
-          <span class="text-[10px] font-mono uppercase text-wood-terracotta font-semibold">Most frequent collapse</span>
+          <span class="text-[10px] font-mono uppercase text-wood-terracotta font-semibold">Most Frequent Mistake</span>
           <p class="text-xs font-semibold text-wood-espresso">${escapeHTML(m.archetype)}</p>
         </div>
       </div>
@@ -117,7 +120,7 @@ function renderComparison() {
       </div>
     </div>
     <span class="text-xs font-mono px-3 py-1 rounded-full bg-cream-bg border border-cream-border text-wood-walnut">
-      ${currentGameObj.models.length} Architectures Evaluated
+      ${currentGameObj.models.length} LLMs Evaluated
     </span>
   `;
 

@@ -9,19 +9,31 @@ function switchTab(tabId) {
   });
 
   const activeBtn = document.getElementById(`nav-${tabId}`);
-  if (activeBtn && tabId !== "admin") {
+  if (activeBtn && activeBtn.classList.contains("floater-pill")) {
+    document.querySelectorAll(".floater-pill").forEach(btn => {
+      btn.classList.toggle("active-pill", btn === activeBtn);
+    });
+  } else if (activeBtn && tabId !== "admin") {
     activeBtn.className = "nav-btn px-3.5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 bg-wood-walnut text-cream-bg shadow-sm";
   }
 
   window.scrollTo({ top: 0, behavior: "smooth" });
-  lucide.createIcons();
+  if (window.lucide && typeof window.lucide.createIcons === "function") {
+    window.lucide.createIcons();
+  }
+}
+
+function selectFloaterTab(tabId) {
+  switchTab(tabId);
 }
 
 function refreshAllViews() {
   renderHomeMetrics();
   renderComparison();
   renderSources();
-  lucide.createIcons();
+  if (window.lucide && typeof window.lucide.createIcons === "function") {
+    window.lucide.createIcons();
+  }
 }
 
 window.addEventListener("DOMContentLoaded", () => {

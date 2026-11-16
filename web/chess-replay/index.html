@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weird Index | Headless Chess Replay & Audit Suite</title>
+    <title>Chess Games</title>
     <link rel="stylesheet" href="../assets/app.css">
     <link rel="stylesheet" href="./assets/main.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -88,10 +88,10 @@
             <div id="turnBanner" class="w-full mb-3 px-4 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900/80 flex flex-wrap items-center justify-between gap-2 transition-colors duration-200">
                 <div class="flex items-center gap-2.5">
                     <span id="actorBadge" class="text-xs font-mono font-bold uppercase px-2.5 py-1 rounded-md bg-zinc-800 text-gray-300 border border-zinc-700">
-                        CLOUD SYNC
+                        CLOUD
                     </span>
                     <span id="moveHeadline" class="text-sm md:text-base font-bold text-white font-mono">
-                        Connecting to Supabase Cloud…
+                        Connecting…
                     </span>
                 </div>
                 <div class="flex items-center gap-2">
@@ -107,9 +107,9 @@
                     <div class="w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-3 text-2xl">
                         ♟️
                     </div>
-                    <h3 class="text-sm font-semibold text-gray-200 mb-1">Loading Chess Replay from Supabase…</h3>
+                    <h3 class="text-sm font-semibold text-gray-200 mb-1">Loading...</h3>
                     <p class="text-xs text-gray-400 leading-relaxed">
-                        Fetching verified SAN move log, PGN headers, and collision coordinates.
+                        Fetching...
                     </p>
                 </div>
 
@@ -144,7 +144,7 @@
                     </div>
 
                     <button id="btnJumpFail" disabled class="px-3.5 py-2 bg-red-950/80 hover:bg-red-900/80 text-red-200 border border-red-800/80 disabled:opacity-30 rounded-xl font-semibold text-xs md:text-sm transition flex items-center gap-1.5 shadow">
-                        <span>💥</span> Jump to Final Ply
+                        <span>💥</span> Jump to Final Move
                     </button>
                 </div>
             </div>
@@ -170,7 +170,7 @@
                 <div id="illegalCalloutBox" class="bg-red-950/40 border border-red-900/60 rounded-xl p-3 flex items-start gap-2.5">
                     <span class="text-base leading-none mt-0.5">⚠️</span>
                     <div class="text-xs flex-1">
-                        <div class="font-bold text-red-300 uppercase tracking-wider text-[10px]">Terminal State / Failure Mode</div>
+                        <div class="font-bold text-red-300 uppercase tracking-wider text-[10px]">Failure Details</div>
                         <div id="illegalMoveDetail" class="font-mono text-red-200 mt-0.5 break-all">Loading trial…</div>
                     </div>
                 </div>
@@ -178,11 +178,11 @@
 
             <div class="bg-chessCard border border-chessBorder rounded-2xl p-4 shadow-xl flex flex-col flex-1 min-h-[220px] max-h-[300px]">
                 <div class="flex items-center justify-between mb-2">
-                    <h2 class="text-sm font-bold text-white">Chronological Ply Log</h2>
+                    <h2 class="text-sm font-bold text-white">Chronological Move log</h2>
                     <span id="totalPliesBadge" class="text-[11px] font-mono text-gray-400">0 Plies</span>
                 </div>
                 <div id="plyListContainer" class="flex-1 overflow-y-auto space-y-1.5 pr-1 font-mono text-xs">
-                    <div class="text-gray-500 text-center py-8 text-xs font-sans">Loading ply-by-ply bot attribution…</div>
+                    <div class="text-gray-500 text-center py-8 text-xs font-sans">Loading…</div>
                 </div>
             </div>
 
@@ -190,7 +190,7 @@
                 <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-accentAmber animate-pulse"></span>
-                        <h2 class="text-xs font-bold uppercase tracking-wider text-gray-300">Exact Prompt Sent at Current Ply</h2>
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-gray-300">Exact Prompt Sent at Current Move</h2>
                     </div>
                     <button id="btnCopyCurrentPrompt" disabled class="text-[11px] font-mono text-accentAmber hover:underline disabled:opacity-40">
                         Copy Prompt
@@ -207,16 +207,16 @@
             <div class="p-4 md:p-5 border-b border-chessBorder flex items-center justify-between bg-chessPanel">
                 <div>
                     <div class="flex items-center gap-2">
-                        <h3 class="text-base md:text-lg font-bold text-white">Verifiable Prompt History & Audit Log</h3>
-                        <span class="text-[11px] font-mono bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded">Reproducibility Record</span>
+                        <h3 class="text-base md:text-lg font-bold text-white">Prompt History</h3>
+                        <span class="text-[11px] font-mono bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded">Record</span>
                     </div>
-                    <p id="modalSubtitle" class="text-xs text-gray-400 mt-0.5">Complete chronological transcript of prompts sent to the LLM during this trial.</p>
+                    <p id="modalSubtitle" class="text-xs text-gray-400 mt-0.5">Complete transcript of prompts sent to the LLM during this trial.</p>
                 </div>
                 <button id="btnClosePromptModal" class="p-2 text-gray-400 hover:text-white rounded-lg bg-zinc-800 hover:bg-zinc-700 transition">✕</button>
             </div>
             <div class="p-5 overflow-y-auto space-y-4 font-mono text-xs flex-1" id="modalAuditBody"></div>
             <div class="p-4 border-t border-chessBorder bg-chessPanel flex flex-wrap items-center justify-between gap-3">
-                <span class="text-xs text-gray-400">Can be cited or attached as supplementary material for your Weird Index study.</span>
+                <span class="text-xs text-gray-400">Can be cited or attached as supplementary material.</span>
                 <div class="flex items-center gap-2.5">
                     <button id="btnCopyFullAudit" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-gray-200 rounded-xl border border-zinc-700 text-xs font-semibold transition">Copy Full Audit Log</button>
                     <button id="btnDownloadAudit" class="px-4 py-2 bg-accent hover:bg-red-600 text-white rounded-xl text-xs font-semibold transition shadow-lg">Download Audit (.txt)</button>
@@ -226,7 +226,7 @@
     </div>
 
     <footer class="w-full max-w-7xl mx-auto mt-6 pt-4 border-t border-chessBorder/60 flex flex-col sm:flex-row items-center justify-between text-xs text-zinc-500 gap-2">
-        <div>Weird Index Benchmark Suite &bull; Headless Chess State-Tracking & Spatial Drift Visualizer</div>
+        <div>Chess replays &bull; All chess games played by our models, visulazed</div>
         <div class="font-mono text-[11px]">Powered by Supabase Cloud &amp; React-Chessboard</div>
     </footer>
 
@@ -536,7 +536,7 @@ commentary, or other text.`;
         function generateFullAuditText(trial) {
             let lines = [
                 `====================================================================`,
-                `WEIRD INDEX HEADLESS CHESS — VERIFIABLE PROMPT & STATE AUDIT LOG`,
+                `CHESS: PROMPT HISTORY`,
                 `Match ID: ${trial.displayName}`,
                 `White Engine: ${trial.whiteBot}`,
                 `Black Engine: ${trial.blackBot}`,

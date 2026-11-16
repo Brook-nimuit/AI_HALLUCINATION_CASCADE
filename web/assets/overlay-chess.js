@@ -46,18 +46,57 @@ function inferChessIllegalSquares(moveObj) {
   if (ill && ill.from_square && ill.to_square) {
     return [ill.from_square, ill.to_square];
   }
-  const reason = String(moveObj.reason || "");
-  const m = reason.match(/\b([a-h][1-8])\s*(?:→|->)\s*([a-h][1-8])\b/i);
+  const text = [moveObj.reason, moveObj.raw_response, moveObj.move]
+    .filter(Boolean)
+    .join(" ");
+  const uci = text.match(/\b([a-h][1-8])([a-h][1-8])(?:[qrbn])?\b/i);
+  if (uci) return [uci[1].toLowerCase(), uci[2].toLowerCase()];
+  const m = text.match(/\b([a-h][1-8])\s*(?:→|->|-|\bto\b)\s*([a-h][1-8])\b/i);
   if (m) return [m[1].toLowerCase(), m[2].toLowerCase()];
   return [null, null];
 }
 
-function buildChessOverlayBoardHtml(fen, moveObj) {
+function getFenPieceSquares(fen) {
+  const squares = {};
+  const rows = String(fen || "").split(" ")[0].split("/");
+  for (let row = 0; row < rows.length && row < 8; row++) {
+    let col = 0;
+    for (const ch of rows[row]) {
+      if (ch >= "1" && ch <= "8") {
+        col += Number(ch);
+      } else if (col < 8) {
+        squares[String.fromCharCode(97 + col) + String(8 - row)] = ch;
+        col += 1;
+      }
+    }
+  }
+  return squares;
+}
+
+function inferChessLastMoveSquares(moveObj) {
+  if (!moveObj || !moveObj.pre_fen || !moveObj.post_fen) return [null, null];
+  const before = getFenPieceSquares(moveObj.pre_fen);
+  const after = getFenPieceSquares(moveObj.post_fen);
+  const changedFrom = Object.keys(before).filter(square => before[square] && !after[square]);
+  const changedTo = Object.keys(after).filter(square => after[square] && before[square] !== after[square]);
+  const san = String(moveObj.san || "");
+  const piece = san.startsWith("O-O") ? "k" : (/^[KQRBN]/.test(san) ? san[0].toLowerCase() : "p");
+  const from = changedFrom.find(square => before[square].toLowerCase() === piece) || changedFrom[0];
+  const to = changedTo.find(square => after[square].toLowerCase() === piece) || changedTo[0];
+  return [from || null, to || null];
+}
+
+function buildChessOverlayBoardHtml(fen, moveObj, highlightLastMove) {
   const grid = parseFenBoard(fen);
-  const isIllegal = moveObj && moveObj.status === "ILLEGAL";
-  const [illFrom, illTo] = isIllegal ? inferChessIllegalSquares(moveObj) : [null, null];
-  const fromCoord = algebraicToRowCol(illFrom);
-  const toCoord = algebraicToRowCol(illTo);
+  const moveStatus = String(moveObj && moveObj.status || "").toUpperCase();
+  const isIllegal = Boolean(moveObj && moveStatus && moveStatus !== "LEGAL");
+  const [fromSquare, toSquare] = isIllegal
+    ? inferChessIllegalSquares(moveObj)
+    : (highlightLastMove ? inferChessLastMoveSquares(moveObj) : [null, null]);
+  const fromCoord = algebraicToRowCol(fromSquare);
+  const toCoord = algebraicToRowCol(toSquare);
+  const arrowColor = isIllegal ? "#dc2626" : "#facc15";
+  const dashAttr = isIllegal ? 'stroke-dasharray="2.5 1.5"' : "";
 
   let cellsHtml = "";
   for (let r = 0; r < 8; r++) {
@@ -65,8 +104,8 @@ function buildChessOverlayBoardHtml(fen, moveObj) {
       const sqName = String.fromCharCode(97 + c) + String(8 - r);
       const isLight = (r + c) % 2 === 0;
       let bg = isLight ? "#eeeed2" : "#769656";
-      if (sqName === illTo) bg = "#e05246";
-      else if (sqName === illFrom) bg = "#e6c35c";
+      if (sqName === toSquare) bg = isIllegal ? "#e05246" : "#e6c35c";
+      else if (sqName === fromSquare) bg = "#e6c35c";
 
       const piece = grid[r][c];
       const isWhitePiece = piece && piece === piece.toUpperCase();
@@ -80,8 +119,8 @@ function buildChessOverlayBoardHtml(fen, moveObj) {
       const fileLabel = r === 7
         ? `<span style="position: absolute; bottom: 1px; right: 3px; font-size: 8px; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: ${isLight ? "#769656" : "#eeeed2"};">${String.fromCharCode(97 + c)}</span>`
         : "";
-      const blunderBadge = sqName === illTo
-        ? `<span style="position: absolute; top: 2px; right: 2px; background: #d71920; color: #fff; font-size: 8px; font-weight: 900; padding: 1px 3px; border-radius: 99px; border: 1px solid #fff;">!!</span>`
+      const blunderBadge = isIllegal && sqName === toSquare
+        ? `<span style="position: absolute; top: 2px; right: 2px; background: #d71920; color: #fff; font-size: 8px; font-weight: 900; padding: 1px 3px; border-radius: 99px; border: 1px solid #fff;">?!</span>`
         : "";
 
       cellsHtml += `
@@ -101,11 +140,11 @@ function buildChessOverlayBoardHtml(fen, moveObj) {
     arrowSvg = `
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5;">
         <defs>
-          <marker id="chessIllArrow" markerWidth="4.5" markerHeight="4.5" refX="3.5" refY="2.25" orient="auto">
-            <path d="M0,0 L4.5,2.25 L0,4.5 z" fill="#dc2626"></path>
+          <marker id="chessLastMoveArrow" markerWidth="4.5" markerHeight="4.5" refX="3.5" refY="2.25" orient="auto">
+            <path d="M0,0 L4.5,2.25 L0,4.5 z" fill="${arrowColor}"></path>
           </marker>
         </defs>
-        <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#dc2626" stroke-width="1.6" stroke-dasharray="2.5 1.5" marker-end="url(#chessIllArrow)"></line>
+        <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${arrowColor}" stroke-width="1.8" ${dashAttr} marker-end="url(#chessLastMoveArrow)"></line>
       </svg>
     `;
   }
@@ -184,7 +223,13 @@ function updateChessScrubberDom() {
 async function loadChessReplayIntoOverlay(trialId) {
   const stage = document.getElementById("chess-overlay-stage");
   if (!stage) return;
-  stage.innerHTML = '<div class="p-4 text-center font-mono text-xs text-wood-umber">Loading 8×8 Chessboard from Supabase…</div>';
+  stage.innerHTML = `
+    <div class="p-8 rounded-2xl bg-cream-card border border-cream-border flex flex-col items-center justify-center gap-3 text-center">
+      <div class="fetching-match-spinner"></div>
+      <div class="font-mono text-xs font-bold tracking-widest uppercase text-wood-walnut">FETCHING MATCH</div>
+      <p class="text-[11px] text-wood-umber">Streaming turn-by-turn state log from Supabase Cloud…</p>
+    </div>
+  `;
 
   try {
     const row = await fetchSingleReplay(trialId);

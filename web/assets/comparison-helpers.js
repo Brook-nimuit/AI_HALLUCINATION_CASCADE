@@ -2,18 +2,18 @@
 // Constants and simple text helpers for the AI Models Comparison page.
 
 const GAME_DESCRIPTIONS = {
-  "chess": "High branching factor (35+ legal moves/turn). Extreme sensitivity to coordinate occlusion and piece memory.",
-  "checkers": "10x10 International Draughts. Mandatory maximum-capture chains across deep diagonal trajectories.",
+  "chess": "High branching factor (35+ legal moves/turn).",
+  "checkers": "10x10 International Draughts. Mandatory maximum-capture rule.",
   "uno": "Non-spatial hand inventory management. Tests color/value matching and hidden card tracking.",
-  "connect-four": "Vertical gravity constraint (7x6 grid). Tests column stacking and diagonal threat detection.",
-  "tic-tac-toe": "3x3 baseline control benchmark verifying basic board occupancy memory."
+  "connect-four": "Vertical gravity constraint (7x6 grid). Tests column stacking.",
+  "tic-tac-toe": "Baseline LLM should be able to play this"
 };
 
 const ARCHETYPE_FALLBACKS = {
   "chess": "Coordinate Desync & Illegal Trajectory",
-  "checkers": "Mandatory Max-Capture Violation",
+  "checkers": "Mandatory Max-Capture Rule violation",
   "uno": "Hallucinated Card Not in Hand",
-  "connect-four": "Gravity / Column Overflow Drift",
+  "connect-four": "Gravity / Column Overflow",
   "tic-tac-toe": "Occupied Square Overwrite"
 };
 
@@ -90,21 +90,28 @@ function identifyCulpritModel(trial) {
 
 // Pulls out a short failure label from the reason text
 function extractArchetypeFromReason(reason) {
-  const text = String(reason || "").split("[Snapshot:")[0].trim();
+  const text = String(reason || "")
+    .split("[Snapshot:")[0]
+    .trim()
+    .replace(/^\[[^\]]+\]\s*/, "");
   if (!text) return null;
 
-  // Look for text inside parentheses like "(Overwrote 'R')"
-  const openParen = text.indexOf("(");
-  const closeParen = text.indexOf(")", openParen + 1);
-  if (openParen !== -1 && closeParen !== -1) {
-    const inside = text.slice(openParen + 1, closeParen).trim();
-    if (inside && !inside.toLowerCase().startsWith("ambiguous san")) {
-      return inside;
-    }
+  const illegalMoveIndex = text.toLowerCase().indexOf("illegal move:");
+  const details = illegalMoveIndex === -1
+    ? text
+    : text.slice(illegalMoveIndex + "illegal move:".length).trim();
+  if (!details || /^(black|white|completed)$/i.test(details)) return null;
+
+  const diagnosticIndex = details.search(/\s*\((?:illegal san|illegal uci)\s*:/i);
+  const mistake = (diagnosticIndex === -1 ? details : details.slice(0, diagnosticIndex))
+    .replace(/^['"][^'"]+['"]\s*[—–-]\s*/, "")
+    .trim();
+  if (!mistake) return null;
+
+  const parenthetical = mistake.match(/\(([^()]*)\)/);
+  if (parenthetical && !/^(?:O-O(?:-O)?|[a-h][1-8])$/i.test(parenthetical[1].trim())) {
+    return parenthetical[1].trim();
   }
 
-  if (text.length <= 48 && text.toLowerCase() !== "completed") {
-    return text;
-  }
-  return null;
+  return mistake.length <= 80 ? mistake : null;
 }

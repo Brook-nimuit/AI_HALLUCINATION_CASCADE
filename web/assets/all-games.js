@@ -373,6 +373,77 @@
     }
     byId("filter-model").innerHTML = modelOpts;
   }
+  function renderHomeTopMetrics(trials) {
+    const grid = byId("home-metrics-grid");
+    if (!grid || !Array.isArray(trials)) return;
+
+    let illegalMoves = 0;
+    let illegalPliesSum = 0;
+    let boardHelpRequests = 0;
+
+    for (let i = 0; i < trials.length; i++) {
+      const t = trials[i];
+      boardHelpRequests += Number(t.board_print_requests || 0);
+      if (t.status === "invalid_or_illegal") {
+        illegalMoves += 1;
+        illegalPliesSum += Number(t.turns || 0);
+      }
+    }
+
+    const meanCollapse = illegalMoves > 0
+      ? "Turn " + (illegalPliesSum / illegalMoves).toFixed(1)
+      : "Turn 0.0";
+
+    grid.innerHTML = `
+      <div class="bg-cream-card border border-cream-border rounded-2xl p-5 flex items-start justify-between">
+        <div>
+          <div class="text-[11px] font-mono uppercase tracking-wider text-wood-umber">TOTAL TRIALS LOGGED</div>
+          <div class="font-serif text-3xl font-bold text-wood-walnut mt-1">${trials.length}</div>
+          <div class="text-xs text-wood-umber mt-1">Across 5 deterministic games</div>
+        </div>
+        <div class="p-2.5 rounded-xl bg-cream-bg border border-cream-border text-wood-walnut">
+          <i data-lucide="swords" class="w-4 h-4"></i>
+        </div>
+      </div>
+
+      <div class="bg-cream-card border border-cream-border rounded-2xl p-5 flex items-start justify-between">
+        <div>
+          <div class="text-[11px] font-mono uppercase tracking-wider text-wood-umber">MEAN COLLAPSE HORIZON</div>
+          <div class="font-serif text-3xl font-bold text-wood-terracotta mt-1">${meanCollapse}</div>
+          <div class="text-xs text-wood-umber mt-1">Onset of coordinate drift</div>
+        </div>
+        <div class="p-2.5 rounded-xl bg-cream-bg border border-cream-border text-wood-terracotta">
+          <i data-lucide="flame" class="w-4 h-4"></i>
+        </div>
+      </div>
+
+      <div class="bg-cream-card border border-cream-border rounded-2xl p-5 flex items-start justify-between">
+        <div>
+          <div class="text-[11px] font-mono uppercase tracking-wider text-wood-umber">ILLEGAL MOVES RECORDED</div>
+          <div class="font-serif text-3xl font-bold text-wood-walnut mt-1">${illegalMoves}</div>
+          <div class="text-xs text-wood-umber mt-1">Phantom spawns &amp; rule breaks</div>
+        </div>
+        <div class="p-2.5 rounded-xl bg-cream-bg border border-cream-border text-wood-walnut">
+          <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+        </div>
+      </div>
+
+      <div class="bg-cream-card border border-cream-border rounded-2xl p-5 flex items-start justify-between">
+        <div>
+          <div class="text-[11px] font-mono uppercase tracking-wider text-wood-umber">HOW MANY TIMES AI ASKED FOR HELP</div>
+          <div class="font-serif text-3xl font-bold text-wood-walnut mt-1">${boardHelpRequests}</div>
+          <div class="text-xs text-wood-umber mt-1">Mid-game board printouts requested</div>
+        </div>
+        <div class="p-2.5 rounded-xl bg-cream-bg border border-cream-border text-wood-walnut">
+          <i data-lucide="help-circle" class="w-4 h-4"></i>
+        </div>
+      </div>
+    `;
+
+    if (window.lucide && typeof window.lucide.createIcons === "function") {
+      window.lucide.createIcons();
+    }
+  }
 
   async function initCloudTrials() {
     try {
@@ -384,6 +455,7 @@
 
       window.liveTrials = allTrials;
       if (typeof window.onLiveTrialsUpdated === "function") {
+        renderHomeTopMetrics(allTrials);
         window.onLiveTrialsUpdated(cloudRows);
       }
 

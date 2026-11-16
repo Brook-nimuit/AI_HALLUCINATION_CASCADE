@@ -178,7 +178,13 @@ function updateCheckersScrubberDom() {
 async function loadCheckersReplayIntoOverlay(trialId) {
   const stage = document.getElementById("checkers-overlay-stage");
   if (!stage) return;
-  stage.innerHTML = '<div class="p-4 text-center font-mono text-xs text-wood-umber">Loading 10×10 Draughts board from Supabase…</div>';
+  stage.innerHTML = `
+    <div class="p-8 rounded-2xl bg-cream-card border border-cream-border flex flex-col items-center justify-center gap-3 text-center">
+      <div class="fetching-match-spinner"></div>
+      <div class="font-mono text-xs font-bold tracking-widest uppercase text-wood-walnut">FETCHING MATCH</div>
+      <p class="text-[11px] text-wood-umber">Streaming turn-by-turn state log from Supabase Cloud…</p>
+    </div>
+  `;
 
   try {
     const row = await fetchSingleReplay(trialId);

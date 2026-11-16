@@ -1,7 +1,7 @@
 const ARCHETYPE_LOOKUP = {
   "Chess": {
     "GPT-4o": "Phantom Piece Spawning & Diagonal Teleportation",
-    "Claude 3.5 Sonnet": "Pinned Piece Blindness & Quiet State Drift",
+    "Claude 3.5 Sonnet": "Pinned Piece Blindness",
     "Llama 3.1 (70B)": "Early Coordinate Desync & Friendly Fire"
   },
   "Connect Four": {
@@ -9,13 +9,9 @@ const ARCHETYPE_LOOKUP = {
     "Claude 3.5 Sonnet": "Rare Row-Height Off-By-One",
     "Llama 3.1 (70B)": "Floating Discs (Ignoring Gravity)"
   },
-  "Battleship": {
-    "GPT-4o": "Duplicate Coordinate Firing & 6-Tile Carrier",
-    "Claude 3.5 Sonnet": "Conservative Quadrant Clustering"
-  },
   "Tic-Tac-Toe": {
     "GPT-4o": "Near-Zero Collapse (Solved Horizon)",
-    "Claude 3.5 Sonnet": "Deterministic Draw Lock"
+    "Claude 3.5 Sonnet": " "
   }
 };
 

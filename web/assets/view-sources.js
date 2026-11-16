@@ -48,5 +48,7 @@ function renderSources() {
         </div>
     `;
     }).join("");
-    lucide.createIcons();
+    if (window.lucide && typeof window.lucide.createIcons === "function") {
+        window.lucide.createIcons();
+    }
 }
