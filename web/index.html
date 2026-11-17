@@ -428,6 +428,24 @@
               </div>
             </div>
           </div>
+
+          <div class="trending-slide" data-slide="3">
+              <div class="w-full space-y-5">
+                <div>
+                  <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-wood-walnut/10 border border-cream-border text-wood-walnut text-xs font-mono font-semibold">
+                    <span>GOTHAMCHESS</span>
+                  </div>
+                  <h2 class="font-serif text-2xl sm:text-3xl font-bold text-wood-espresso mt-3">GPT-6 Astra vs. Claude Fable 5.1</h2>
+                  <p class="text-sm text-wood-umber mt-1">Watch the full Chess match on YouTube.</p>
+                </div>
+                <div class="grid grid-cols-1 gap-4">
+                  <a class="featured-video-card" href="https://youtu.be/ulLBRyVrI1Y?si=HacW8K88XoSRjAu7" target="_blank" rel="noopener noreferrer" aria-label="Watch GPT-6 ASTRA vs CLAUDE FABLE 5.1 (INSANE CHESS MATCH) on YouTube">
+                    <img src="https://i.ytimg.com/vi/ulLBRyVrI1Y/hqdefault.jpg" alt="GothamChess video thumbnail" loading="eager" decoding="async">
+                    <span class="featured-video-title"><span class="font-serif text-lg font-bold">GPT-6 ASTRA vs CLAUDE FABLE 5.1 (INSANE CHESS MATCH)</span></span>
+                  </a>
+                </div>
+              </div>
+          </div>
           </div>
 
           <!-- Bottom Carousel Dots -->
@@ -499,7 +517,7 @@
                 </p>
               </div>
               <div class="bg-cream-bg p-4 rounded-xl border border-cream-border">
-                <span class="font-mono text-xs font-bold text-wood-walnut">3. REFEREE AUDIT</span>
+                <span class="font-mono text-xs font-bold text-wood-walnut">3. REF</span>
                 <h4 class="font-serif font-bold text-wood-espresso mt-1">Failure Logs</h4>
                 <p class="text-xs text-wood-umber mt-1.5 leading-relaxed">
                   Separate true illegal moves from API timeouts and token truncations.
@@ -548,10 +566,9 @@
               <h3 class="font-serif text-2xl font-bold text-wood-espresso mt-1">Literature Review &amp; Supporting Sources</h3>
             </div>
             <div class="flex flex-wrap gap-2">
-              <button onclick="filterSources('ALL')" id="src-btn-ALL" class="src-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-wood-walnut text-cream-bg">All Sources</button>
-              <button onclick="filterSources('bibliography')" id="src-btn-bibliography" class="src-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-cream-card text-wood-umber border border-cream-border hover:bg-cream-hover">Bibliography</button>
-              <button onclick="filterSources('levy_video')" id="src-btn-levy_video" class="src-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-cream-card text-wood-umber border border-cream-border hover:bg-cream-hover">Videos</button>
-              <button onclick="filterSources('interview')" id="src-btn-interview" class="src-filter-btn px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-cream-card text-wood-umber border border-cream-border hover:bg-cream-hover">Interviews</button>
+              <a href="Annotated%20Bibliography%20-%20Brook%20Animut.pdf" target="_blank" rel="noopener noreferrer" class="px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-wood-walnut text-cream-bg hover:bg-wood-walnutHover inline-flex items-center gap-1.5">
+                Bibliography <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+              </a>
             </div>
           </div>
           <div id="sources-grid-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
@@ -661,7 +678,7 @@
     <script src="assets/api/supabase-client.js"></script>
     <script src="assets/comparison-helpers.js"></script>
     <script src="assets/comparison-math.js"></script>
-    <script src="assets/view-home.js?v=featured-carousel-10"></script>
+    <script src="assets/view-home.js?v=featured-carousel-12"></script>
     <script src="assets/view-comparison.js?v=comparison-label-1"></script>
     <script src="assets/view-sources.js"></script>
     <script src="assets/view-admin.js"></script>

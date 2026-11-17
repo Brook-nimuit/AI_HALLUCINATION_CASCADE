@@ -13,7 +13,7 @@ function filterSources(cat) {
 
 function renderSources() {
     const container = document.getElementById("sources-grid-container");
-    const filtered = appData.sources.filter(s => activeSourceFilter === "ALL" || s.category === activeSourceFilter);
+    const filtered = appData.sources.filter(s => s.category === "bibliography");
 
     const categoryLabels = {
     levy_video: { label: "Levy's Videos (GothamChess)", icon: "video", color: "text-wood-terracotta bg-wood-terracotta/10 border-wood-terracotta/30" },

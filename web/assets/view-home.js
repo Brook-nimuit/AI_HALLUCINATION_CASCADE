@@ -36,6 +36,7 @@ let featuredTickerSignature = null;
 let featuredGamesRequestKey = null;
 let featuredGameSlideCache = [];
 let featuredVideoSlideContent = "";
+const FEATURED_CHESS_TRIAL_ID = "chess__claude-opus-5-5__20261111T210654296520__1__0129";
 
 function getModelBrand(modelName) {
   const lower = String(modelName || "").toLowerCase();
@@ -78,7 +79,6 @@ function buildFeaturedPlayerSlide(players) {
         <div class="min-w-0 text-center sm:text-left space-y-2">
           <div class="font-mono text-[11px] uppercase tracking-widest text-wood-umber">${brand.label}</div>
           <h3 class="font-serif text-xl sm:text-2xl font-bold text-wood-espresso break-all">${escapeHTML(player.name)}</h3>
-          <p class="text-sm text-wood-umber">${player.trials} archived ${player.trials === 1 ? "trial" : "trials"}</p>
         </div>
       </article>
     `;
@@ -88,7 +88,6 @@ function buildFeaturedPlayerSlide(players) {
       <div>
         <span class="inline-flex items-center px-3 py-1 rounded-full bg-wood-walnut/10 border border-cream-border text-wood-walnut text-xs font-mono font-semibold">MODELS IN THE STUDY</span>
         <h2 class="font-serif text-2xl sm:text-3xl font-bold text-wood-espresso mt-3">Evaluated models</h2>
-        <p class="text-sm text-wood-umber mt-1">Two models per slide, with an official provider logo beside each exact model name.</p>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">${cards}</div>
     </div>
@@ -119,6 +118,13 @@ function chooseFeaturedMatches(rows) {
   for (const row of rows) {
     if (!isFeaturedMatch(row)) continue;
     const game = String(row.game).toLowerCase();
+    if (game === "chess" && row.trial_id === FEATURED_CHESS_TRIAL_ID) {
+      bestByGame.chess = row;
+      continue;
+    }
+    if (game === "chess" && bestByGame.chess && bestByGame.chess.trial_id === FEATURED_CHESS_TRIAL_ID) {
+      continue;
+    }
     const plies = Number(row.plies_survived ?? row.turns ?? 0) || 0;
     const currentPlies = bestByGame[game]
       ? Number(bestByGame[game].plies_survived ?? bestByGame[game].turns ?? 0) || 0
@@ -197,15 +203,10 @@ async function buildFeaturedGameCard(row) {
 
 function buildFeaturedGameSlide(game, cardHtml) {
   const gameLabel = game === "chess" ? "Chess" : "Checkers";
-  const description = game === "checkers"
-    ? "A Checkers replay with at least 50 moves."
-    : "The longest eligible GPT–Claude or Claude–Claude Chess match.";
   return `
     <div class="w-full max-w-4xl mx-auto space-y-5">
       <div>
-        <span class="inline-flex items-center px-3 py-1 rounded-full bg-wood-walnut/10 border border-cream-border text-wood-walnut text-xs font-mono font-semibold">SELECTED MATCH</span>
-        <h2 class="font-serif text-2xl sm:text-3xl font-bold text-wood-espresso mt-3">${gameLabel} · longest eligible matchup</h2>
-        <p class="text-sm text-wood-umber mt-1">${description}</p>
+        <h2 class="font-serif text-2xl sm:text-3xl font-bold text-wood-espresso">${gameLabel}</h2>
       </div>
       ${cardHtml}
     </div>
@@ -275,10 +276,22 @@ window.renderFeaturedHighlights = async function (rows) {
 
   try {
     const gameSlides = await getFeaturedGameSlides(rows);
-    renderTickerSlides([...playerSlides, ...gameSlides, getFeaturedVideoSlideContent()]);
+    const extraVideoSlide = document.querySelector("#ticker-slides .trending-slide[data-slide='3']");
+    renderTickerSlides([
+      ...playerSlides,
+      ...gameSlides,
+      getFeaturedVideoSlideContent(),
+      extraVideoSlide ? extraVideoSlide.innerHTML : ""
+    ]);
   } catch (error) {
     const errorSlide = `<div class="w-full text-center text-sm text-wood-terracotta">Could not load featured games: ${escapeHTML(error.message)}</div>`;
-    renderTickerSlides([...playerSlides, errorSlide, getFeaturedVideoSlideContent()]);
+    const extraVideoSlide = document.querySelector("#ticker-slides .trending-slide[data-slide='3']");
+    renderTickerSlides([
+      ...playerSlides,
+      errorSlide,
+      getFeaturedVideoSlideContent(),
+      extraVideoSlide ? extraVideoSlide.innerHTML : ""
+    ]);
   }
 };
 
