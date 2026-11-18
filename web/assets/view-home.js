@@ -30,8 +30,10 @@ function renderHomeMetrics() {
 }
 
 const TICKER_INTERVAL_MS = 7000;
+const TICKER_INTERACTION_PAUSE_MS = 15000;
 let tickerSlideIndex = 0;
 let tickerTimer = null;
+let tickerHovered = false;
 let featuredTickerSignature = null;
 let featuredGamesRequestKey = null;
 let featuredGameSlideCache = [];
@@ -40,10 +42,38 @@ const FEATURED_CHESS_TRIAL_ID = "chess__claude-opus-5-5__20261111T210654296520__
 
 function getModelBrand(modelName) {
   const lower = String(modelName || "").toLowerCase();
-  if (/claude|anthropic/.test(lower)) return { label: "Anthropic", logoUrl: "https://claude.com/favicon.svg" };
-  if (/gpt|openai/.test(lower)) return { label: "OpenAI", logoUrl: "https://openai.com/favicon.ico" };
-  if (/random/.test(lower)) return { label: "Random legal bot", logoUrl: "" };
-  return { label: "AI model", logoUrl: "" };
+  if (/claude|anthropic/.test(lower)) {
+    const modelPage = /opus/.test(lower) ? "opus" : /sonnet/.test(lower) ? "sonnet" : /haiku/.test(lower) ? "haiku" : "models";
+    return {
+      label: "Anthropic",
+      logoUrl: "https://claude.com/favicon.svg",
+      modelUrl: `https://www.anthropic.com/claude/${modelPage}`
+    };
+  }
+  if (/gpt|openai/.test(lower)) {
+    return {
+      label: "OpenAI",
+      logoUrl: "https://openai.com/favicon.ico",
+      modelUrl: "https://platform.openai.com/docs/models"
+    };
+  }
+  if (/gemini|google/.test(lower)) {
+    return { label: "Google", logoUrl: "", modelUrl: "https://ai.google.dev/gemini-api/docs/models" };
+  }
+  if (/llama|meta/.test(lower)) {
+    return { label: "Meta", logoUrl: "", modelUrl: "https://www.llama.com/models/" };
+  }
+  if (/deepseek/.test(lower)) {
+    return { label: "DeepSeek", logoUrl: "", modelUrl: "https://api-docs.deepseek.com/" };
+  }
+  if (/qwen|alibaba/.test(lower)) {
+    return { label: "Alibaba", logoUrl: "", modelUrl: "https://qwen.readthedocs.io/en/latest/" };
+  }
+  if (/mistral/.test(lower)) {
+    return { label: "Mistral", logoUrl: "", modelUrl: "https://docs.mistral.ai/getting-started/models/models_overview/" };
+  }
+  if (/random/.test(lower)) return { label: "Random legal bot", logoUrl: "", modelUrl: "" };
+  return { label: "AI model", logoUrl: "", modelUrl: "" };
 }
 
 function renderModelLogo(modelName, className) {
@@ -73,14 +103,18 @@ function getFeaturedPlayerStats(rows) {
 function buildFeaturedPlayerSlide(players) {
   const cards = players.map(player => {
     const brand = getModelBrand(player.name);
+    const cardTag = brand.modelUrl ? "a" : "article";
+    const cardAttributes = brand.modelUrl
+      ? `href="${brand.modelUrl}" target="_blank" rel="noopener noreferrer" aria-label="View ${escapeHTML(player.name)} model information on ${brand.label}"`
+      : "";
     return `
-      <article class="bg-cream-card border border-cream-border rounded-2xl p-5 sm:p-7 flex flex-col sm:flex-row items-center gap-5 shadow-lg">
+      <${cardTag} ${cardAttributes} class="featured-model-card bg-cream-card border border-cream-border rounded-2xl p-5 sm:p-7 flex flex-col sm:flex-row items-center gap-5 shadow-lg">
         ${renderModelLogo(player.name, "featured-player-logo-large")}
         <div class="min-w-0 text-center sm:text-left space-y-2">
           <div class="font-mono text-[11px] uppercase tracking-widest text-wood-umber">${brand.label}</div>
           <h3 class="font-serif text-xl sm:text-2xl font-bold text-wood-espresso break-all">${escapeHTML(player.name)}</h3>
         </div>
-      </article>
+      </${cardTag}>
     `;
   }).join("");
   return `
@@ -311,11 +345,25 @@ window.stepTicker = function (delta) {
   window.goToTickerSlide(tickerSlideIndex + Number(delta || 0));
 };
 
+function scheduleTicker(delay = TICKER_INTERVAL_MS) {
+  if (tickerTimer !== null) window.clearTimeout(tickerTimer);
+  tickerTimer = null;
+  if (tickerHovered) return;
+
+  tickerTimer = window.setTimeout(function () {
+    tickerTimer = null;
+    window.stepTicker(1);
+    scheduleTicker();
+  }, delay);
+}
+
+function pauseTickerAfterInteraction() {
+  scheduleTicker(TICKER_INTERACTION_PAUSE_MS);
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   window.goToTickerSlide(0);
-  tickerTimer = window.setInterval(function () {
-    window.stepTicker(1);
-  }, TICKER_INTERVAL_MS);
+  scheduleTicker();
 
   const carousel = document.querySelector(".trending-shell");
   if (!carousel) return;
@@ -324,34 +372,60 @@ document.addEventListener("DOMContentLoaded", function () {
   let touchStartY = null;
   let suppressClickUntil = 0;
 
+  carousel.addEventListener("mouseenter", function () {
+    tickerHovered = true;
+    if (tickerTimer !== null) window.clearTimeout(tickerTimer);
+    tickerTimer = null;
+  });
+
+  carousel.addEventListener("mouseleave", function () {
+    tickerHovered = false;
+    pauseTickerAfterInteraction();
+  });
+
+  carousel.addEventListener("focusin", pauseTickerAfterInteraction);
+
   carousel.addEventListener("touchstart", function (event) {
     const touch = event.changedTouches[0];
     if (!touch) return;
+    if (tickerTimer !== null) window.clearTimeout(tickerTimer);
+    tickerTimer = null;
     touchStartX = touch.clientX;
     touchStartY = touch.clientY;
   }, { passive: true });
 
   carousel.addEventListener("touchend", function (event) {
+    tickerHovered = false;
     const touch = event.changedTouches[0];
-    if (!touch || touchStartX === null || touchStartY === null) return;
+    if (!touch || touchStartX === null || touchStartY === null) {
+      pauseTickerAfterInteraction();
+      return;
+    }
 
     const deltaX = touch.clientX - touchStartX;
     const deltaY = touch.clientY - touchStartY;
     touchStartX = null;
     touchStartY = null;
 
-    if (Math.abs(deltaX) < 48 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
+    if (Math.abs(deltaX) < 48 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) {
+      pauseTickerAfterInteraction();
+      return;
+    }
     if (event.cancelable) event.preventDefault();
     suppressClickUntil = Date.now() + 500;
     window.stepTicker(deltaX < 0 ? 1 : -1);
+    pauseTickerAfterInteraction();
   }, { passive: false });
 
   carousel.addEventListener("touchcancel", function () {
+    tickerHovered = false;
     touchStartX = null;
     touchStartY = null;
+    pauseTickerAfterInteraction();
   }, { passive: true });
 
   carousel.addEventListener("click", function (event) {
+    pauseTickerAfterInteraction();
     if (Date.now() < suppressClickUntil) {
       event.preventDefault();
       event.stopPropagation();

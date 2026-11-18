@@ -64,7 +64,8 @@ The build produces static assets. Use `python local_website.py` for the
 live-data website; opening `web/index.html` directly or using a generic static
 file server will not provide the local trial API. Vercel can still host the
 static site, but live research data there requires a separately configured
-public backend.
+public backend. Vercel Web Analytics is included in the static page; enable it
+for the project in the Vercel dashboard to collect analytics.
 
 The replay viewer is available at `/chess-replay/`. Its file picker expects the
 local `data/local/` folder created by the trial runner. Each new chess match

@@ -276,6 +276,23 @@
       object-fit: contain;
     }
 
+    .featured-model-card[href] {
+      color: inherit;
+      text-decoration: none;
+      transition: border-color 180ms ease, transform 180ms ease;
+    }
+
+    .featured-model-card[href]:hover,
+    .featured-model-card[href]:focus-visible {
+      border-color: var(--purdue-gold-bright);
+      transform: translateY(-2px);
+    }
+
+    .featured-model-card[href]:focus-visible {
+      outline: 2px solid var(--purdue-gold-bright);
+      outline-offset: 3px;
+    }
+
     .featured-game-board {
       position: relative;
       width: 100%;
@@ -324,6 +341,7 @@
       animation: purdueSpin 0.75s linear infinite;
     }
   </style>
+  <script defer src="/_vercel/insights/script.js"></script>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-wood-walnut selection:text-cream-bg">
   <div class="bg-archival min-h-screen flex flex-col flex-grow">
@@ -678,7 +696,7 @@
     <script src="assets/api/supabase-client.js"></script>
     <script src="assets/comparison-helpers.js"></script>
     <script src="assets/comparison-math.js"></script>
-    <script src="assets/view-home.js?v=featured-carousel-12"></script>
+    <script src="assets/view-home.js?v=featured-carousel-13"></script>
     <script src="assets/view-comparison.js?v=comparison-label-1"></script>
     <script src="assets/view-sources.js"></script>
     <script src="assets/view-admin.js"></script>
